@@ -17,6 +17,8 @@
   .brand-name { display: none; }
   .shell-header .user-chip-name { display: none; }
 }
+.sound-toggle { cursor: pointer; font-size: 14px; padding: 4px 8px; }
+.sound-toggle:hover { border-color: var(--accent-a); }
 .user-chip { cursor: pointer; transition: border-color .2s, color .2s; }
 .user-chip:hover { border-color: var(--accent-a); color: var(--text); }
 .user-chip-edit { opacity: .5; font-size: 11px; }

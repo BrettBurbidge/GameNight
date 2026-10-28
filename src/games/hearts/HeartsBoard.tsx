@@ -6,6 +6,7 @@ import type { PlayerInfo } from '../../../shared/types';
 import { Avatar } from '../../components/Avatar';
 import { Confetti } from '../../components/Confetti';
 import { request } from '../../lib/socket';
+import { playSound } from '../../lib/sound';
 import { useNow } from '../../lib/useNow';
 import type { BoardProps } from '../types';
 import { PlayingCard } from './PlayingCard';
@@ -34,6 +35,7 @@ export function HeartsBoard({ view, room, playersById, isHost, act, serverNow }:
   const seatAt = (pos: Pos) => view.seats[(anchor + POSITIONS.indexOf(pos)) % 4];
   const seated = mySeat >= 0;
   const collecting = useCollecting(view.pendingWinner);
+  useHeartsSounds(view);
 
   return (
     <div className="hearts">
@@ -89,6 +91,24 @@ export function HeartsBoard({ view, room, playersById, isHost, act, serverNow }:
       {view.phase === 'game-over' && <GameOver view={view} playersById={playersById} isHost={isHost} />}
     </div>
   );
+}
+
+/** Sound cues for the dramatic moments. Skips whatever was already true when the board mounted (e.g. on reconnect). */
+function useHeartsSounds(view: HeartsView) {
+  const seen = useRef({ hand: view.handNumber, broken: view.heartsBroken, queen: view.trick.some((p) => p.card === 'QS') });
+  useEffect(() => {
+    const s = seen.current;
+    if (s.hand !== view.handNumber) {
+      s.hand = view.handNumber;
+      s.broken = view.heartsBroken;
+      s.queen = false;
+    }
+    if (view.heartsBroken && !s.broken) playSound('heartsBroken');
+    s.broken = view.heartsBroken;
+    const queenOut = view.trick.some((p) => p.card === 'QS');
+    if (queenOut && !s.queen) playSound('queenOfSpades');
+    s.queen = queenOut;
+  }, [view.handNumber, view.heartsBroken, view.trick]);
 }
 
 /** Lets the last card land before the trick slides to its winner. */

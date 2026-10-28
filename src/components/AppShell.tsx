@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import { useIdentity } from '../lib/identity';
 import { useEditProfile } from './ProfileEditor';
 import { SITE_NAME } from '../lib/site';
+import { useMuted } from '../lib/sound';
 import type { ReactNode } from 'react';
 import './AppShell.css';
 
 export function AppShell({ children, right }: { children: ReactNode; right?: ReactNode }) {
   const [identity] = useIdentity();
   const editProfile = useEditProfile();
+  const [muted, toggleMuted] = useMuted();
   return (
     <div className="shell">
       <header className="shell-header container">
@@ -19,6 +21,15 @@ export function AppShell({ children, right }: { children: ReactNode; right?: Rea
         </Link>
         <div className="row">
           {right}
+          <button
+            className="chip sound-toggle"
+            onClick={toggleMuted}
+            title={muted ? 'Sound effects off — click to turn on' : 'Sound effects on — click to mute'}
+            aria-label={muted ? 'Unmute sound effects' : 'Mute sound effects'}
+            aria-pressed={muted}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
           {identity.name && (
             <button className="chip user-chip" onClick={editProfile} title="Edit your name and avatar">
               <span style={{ fontSize: 15 }}>{identity.avatar}</span>
