@@ -84,3 +84,6 @@
   .invite-code span { width: 40px; height: 50px; font-size: 26px; }
 }
 .lobby-note { padding: 10px 14px; border-radius: var(--radius-sm); background: rgba(192, 132, 252, .12); border: 1px solid rgba(192, 132, 252, .3); font-size: 14px; color: #e9d5ff; }
+.player-name-edit { all: unset; cursor: pointer; display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-name-edit:hover { color: var(--accent-a); }
+.player-name-edit:focus-visible { outline: 2px solid var(--accent-a); border-radius: 4px; }

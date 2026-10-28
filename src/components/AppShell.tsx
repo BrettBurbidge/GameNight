@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useIdentity } from '../lib/identity';
+import { useEditProfile } from './ProfileEditor';
 import { SITE_NAME } from '../lib/site';
 import type { ReactNode } from 'react';
 import './AppShell.css';
 
 export function AppShell({ children, right }: { children: ReactNode; right?: ReactNode }) {
   const [identity] = useIdentity();
+  const editProfile = useEditProfile();
   return (
     <div className="shell">
       <header className="shell-header container">
@@ -18,9 +20,11 @@ export function AppShell({ children, right }: { children: ReactNode; right?: Rea
         <div className="row">
           {right}
           {identity.name && (
-            <span className="chip user-chip">
-              <span style={{ fontSize: 15 }}>{identity.avatar}</span> {identity.name}
-            </span>
+            <button className="chip user-chip" onClick={editProfile} title="Edit your name and avatar">
+              <span style={{ fontSize: 15 }}>{identity.avatar}</span>
+              <span className="user-chip-name">{identity.name}</span>
+              <span className="user-chip-edit">✎</span>
+            </button>
           )}
         </div>
       </header>

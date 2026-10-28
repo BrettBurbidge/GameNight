@@ -263,7 +263,12 @@ export class RoomManager {
       }
       this.announce(room, `${player.name} joined${player.spectator ? ' as a spectator' : ''}.`);
     } else {
-      player.name = sanitizeName(identity.name) || player.name;
+      const wanted = sanitizeName(identity.name);
+      if (wanted && wanted !== player.name) {
+        const renamed = this.uniqueName(room, wanted, player);
+        if (renamed !== player.name) this.announce(room, `${player.name} is now ${renamed}.`);
+        player.name = renamed;
+      }
       player.avatar = sanitizeAvatar(identity.avatar);
     }
 
@@ -491,8 +496,8 @@ export class RoomManager {
     return PLAYER_COLORS.find((c) => !used.has(c)) ?? PLAYER_COLORS[room.players.length % PLAYER_COLORS.length];
   }
 
-  private uniqueName(room: Room, name: string) {
-    const taken = new Set(room.players.map((p) => p.name.toLowerCase()));
+  private uniqueName(room: Room, name: string, self?: RoomPlayer) {
+    const taken = new Set(room.players.filter((p) => p !== self).map((p) => p.name.toLowerCase()));
     if (!taken.has(name.toLowerCase())) return name;
     for (let i = 2; ; i++) if (!taken.has(`${name} ${i}`.toLowerCase())) return `${name} ${i}`;
   }

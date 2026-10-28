@@ -1,6 +1,7 @@
 import './styles/theme.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { ProfileEditorProvider } from './components/ProfileEditor';
 import { ToastProvider } from './lib/toast';
 import { GamePage } from './pages/GamePage';
 import { Home } from './pages/Home';
@@ -14,13 +15,15 @@ function JoinRedirect() {
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <ToastProvider>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/games/:gameId" element={<GamePage />} />
-        <Route path="/join/:code" element={<JoinRedirect />} />
-        <Route path="/room/:code" element={<Room />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ProfileEditorProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/games/:gameId" element={<GamePage />} />
+          <Route path="/join/:code" element={<JoinRedirect />} />
+          <Route path="/room/:code" element={<Room />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ProfileEditorProvider>
     </ToastProvider>
   </BrowserRouter>,
 );

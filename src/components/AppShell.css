@@ -15,5 +15,8 @@
 .shell-header .chip { white-space: nowrap; }
 @media (max-width: 600px) {
   .brand-name { display: none; }
-  .shell-header .user-chip { display: none; }
+  .shell-header .user-chip-name { display: none; }
 }
+.user-chip { cursor: pointer; transition: border-color .2s, color .2s; }
+.user-chip:hover { border-color: var(--accent-a); color: var(--text); }
+.user-chip-edit { opacity: .5; font-size: 11px; }

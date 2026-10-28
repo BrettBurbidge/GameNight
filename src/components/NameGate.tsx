@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { AVATARS, useIdentity } from '../lib/identity';
 
 /** The only "sign in" step: pick a display name and an avatar. Stored in this browser. */
-export function NameGate({ title = 'Who’s playing?', subtitle, onDone, onCancel }: { title?: string; subtitle?: string; onDone: () => void; onCancel?: () => void }) {
+export function NameGate({ title = 'Who’s playing?', subtitle, submitLabel = 'Let’s play', onDone, onCancel }: { title?: string; subtitle?: string; submitLabel?: string; onDone: () => void; onCancel?: () => void }) {
   const [identity, update] = useIdentity();
   const [name, setName] = useState(identity.name);
   const [avatar, setAvatar] = useState(identity.avatar);
@@ -44,7 +44,7 @@ export function NameGate({ title = 'Who’s playing?', subtitle, onDone, onCance
         </div>
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           {onCancel && <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>}
-          <button className="btn btn-primary" disabled={!name.trim()}>Let’s play</button>
+          <button className="btn btn-primary" disabled={!name.trim()}>{submitLabel}</button>
         </div>
       </motion.form>
     </div>
