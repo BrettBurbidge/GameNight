@@ -1,0 +1,17 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# One long-running Node web service serves the built client and the Socket.IO game server.
+services:
+  - type: web
+    name: game-night
+    runtime: node
+    # free sleeps after ~15 idle minutes (open rooms are lost); starter stays up.
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    # Rooms live in memory, so keep a single instance.
+    numInstances: 1
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0

@@ -1,0 +1,19 @@
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+.shell-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+.shell-main { flex: 1; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-name { font-family: var(--font-display); font-weight: 700; font-size: 22px; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 10px; padding: 7px;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899 55%, #f59e0b);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  box-shadow: 0 6px 20px -6px rgba(236, 72, 153, 0.7);
+  transition: transform 0.3s cubic-bezier(.3,1.6,.5,1);
+}
+.brand:hover .brand-mark { transform: rotate(-12deg) scale(1.08); }
+.brand-mark i { background: white; border-radius: 50%; }
+.shell-header .chip { white-space: nowrap; }
+@media (max-width: 600px) {
+  .brand-name { display: none; }
+  .shell-header .user-chip { display: none; }
+}

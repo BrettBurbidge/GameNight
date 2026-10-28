@@ -1,0 +1,209 @@
+/* ------------------------------------------------------------------
+   Game Night design tokens. Restyle the whole suite from here.
+   Each game sets --accent-a / --accent-b on its root for its own colour.
+------------------------------------------------------------------- */
+:root {
+  --bg: #0b0b1a;
+  --bg-2: #12122a;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --surface-solid: #191935;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --text: #f4f3ff;
+  --text-dim: #a9a7c9;
+  --text-faint: #6f6d93;
+  --accent-a: #8b5cf6;
+  --accent-b: #ec4899;
+  --accent: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  --good: #34d399;
+  --bad: #f87171;
+  --warn: #fbbf24;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  --glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 10px 40px -10px color-mix(in srgb, var(--accent-a) 60%, transparent);
+  --font-display: 'Fredoka', ui-rounded, system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  background:
+    radial-gradient(40vmax 40vmax at 15% 10%, rgba(139, 92, 246, 0.28), transparent 60%),
+    radial-gradient(35vmax 35vmax at 90% 20%, rgba(236, 72, 153, 0.18), transparent 60%),
+    radial-gradient(45vmax 45vmax at 60% 100%, rgba(56, 189, 248, 0.14), transparent 60%),
+    var(--bg);
+  animation: drift 30s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  to { transform: translate3d(-3vmax, 2vmax, 0) rotate(4deg); }
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: 0.2px; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; }
+input, select, textarea { font: inherit; color: inherit; }
+
+.gradient-text {
+  background: var(--accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- layout ---------- */
+.container { width: min(1200px, 100% - 32px); margin-inline: auto; }
+.stack { display: flex; flex-direction: column; gap: var(--gap, 12px); }
+.row { display: flex; align-items: center; gap: var(--gap, 12px); }
+.wrap { flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+.center { display: grid; place-items: center; }
+.muted { color: var(--text-dim); }
+.faint { color: var(--text-faint); }
+.small { font-size: 13px; }
+.tiny { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+
+/* ---------- surfaces ---------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+.panel-pad { padding: 20px; }
+
+/* ---------- buttons ---------- */
+.btn {
+  --btn-bg: var(--surface-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); background: rgba(255, 255, 255, 0.14); }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: white;
+  box-shadow: var(--glow);
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover:not(:disabled) { background: var(--surface); }
+.btn-danger { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.35); color: #fecaca; }
+.btn-good { background: rgba(52, 211, 153, 0.18); border-color: rgba(52, 211, 153, 0.4); color: #bbf7d0; }
+.btn-lg { padding: 15px 26px; font-size: 17px; }
+.btn-sm { padding: 7px 12px; font-size: 13px; }
+.btn-icon { padding: 8px; width: 36px; height: 36px; }
+
+/* ---------- inputs ---------- */
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input:focus { border-color: var(--accent-a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-a) 30%, transparent); }
+.input-code {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-family: var(--font-display);
+  font-size: 20px;
+  text-align: center;
+}
+select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 36px; }
+select.input option { background: var(--surface-solid); }
+
+/* ---------- chips & badges ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.chip-accent { background: color-mix(in srgb, var(--accent-a) 22%, transparent); border-color: color-mix(in srgb, var(--accent-a) 45%, transparent); color: white; }
+
+.avatar {
+  --size: 40px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--size) * 0.5);
+  background: color-mix(in srgb, var(--c, #888) 30%, #1a1a33);
+  box-shadow: 0 0 0 2px var(--c, #888);
+  flex-shrink: 0;
+  position: relative;
+}
+.avatar.offline { filter: grayscale(1); opacity: 0.5; }
+.avatar .dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  background: var(--good);
+}
+
+/* ---------- misc ---------- */
+.divider { height: 1px; background: var(--border); border: 0; margin: 4px 0; }
+.kbd { font-family: ui-monospace, monospace; font-size: 12px; padding: 2px 6px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); }
+.scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+.toast-stack { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none; }
+.toast { padding: 10px 18px; border-radius: 999px; background: var(--surface-solid); border: 1px solid var(--border-strong); box-shadow: var(--shadow); font-weight: 600; font-size: 14px; }
+.toast.error { border-color: rgba(248, 113, 113, 0.5); color: #fecaca; }
+
+.modal-backdrop { position: fixed; inset: 0; background: rgba(5, 5, 15, 0.7); backdrop-filter: blur(6px); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.modal { width: min(440px, 100%); background: var(--surface-solid); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.avatar-picker { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.avatar-option { aspect-ratio: 1; border-radius: 10px; border: 1px solid transparent; background: var(--surface); font-size: 20px; cursor: pointer; transition: transform .15s, background .15s; }
+.avatar-option:hover { transform: scale(1.12); background: var(--surface-2); }
+.avatar-option.on { border-color: var(--accent-a); background: color-mix(in srgb, var(--accent-a) 25%, transparent); }
