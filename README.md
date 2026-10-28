@@ -2,8 +2,8 @@
 
 Browser games to play remotely with friends. There are no accounts: pick a game, open a lobby, share the invite link (`/join/CODE`), and play.
 
-**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals) and Hearts (4 seats; bots fill the empty ones).
-**On the roadmap (listed as "coming soon" in the catalog):** Spades, Code Words, On the Dial, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Four in a Row, Gin Rummy.
+**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals), Four in a Row (1v1 or solo against a bot, single game to best of 5) and Hearts (4 seats; bots fill the empty ones).
+**On the roadmap (listed as "coming soon" in the catalog):** Spades, Code Words, On the Dial, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Gin Rummy.
 
 ## Running it
 

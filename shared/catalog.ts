@@ -343,17 +343,49 @@ export const GAMES: GameMeta[] = [
     tags: ['Dice', 'Family', 'Bots'],
   },
   {
-    id: 'connect-four',
+    id: 'four-in-a-row',
     name: 'Four in a Row',
     tagline: 'Drop discs. Line up four.',
-    description: 'The quick head-to-head classic with slick drop animations and a bot opponent.',
+    description:
+      'The quick head-to-head classic. Challenge a friend, or play solo against a bot from easy to genuinely tough. Anyone else who joins can watch.',
     emoji: '🔴',
     minPlayers: 1,
     maxPlayers: 2,
-    minutes: '5',
-    status: 'soon',
+    minutes: '5–15',
+    status: 'live',
     accent: ['#ef4444', '#facc15'],
     tags: ['Strategy', '1v1', 'Bots'],
+    bots: true,
+    fillWithBots: true,
+    config: [
+      {
+        key: 'bestOf',
+        label: 'Match',
+        default: 3,
+        options: [
+          { value: 1, label: 'Single game' },
+          { value: 3, label: 'Best of 3' },
+          { value: 5, label: 'Best of 5' },
+        ],
+      },
+      {
+        key: 'difficulty',
+        label: 'Bot difficulty',
+        default: 'medium',
+        options: [
+          { value: 'easy', label: 'Easy' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'hard', label: 'Hard' },
+        ],
+      },
+    ],
+    howToPlay: [
+      'Take turns dropping a disc into one of the seven columns. It falls to the lowest open spot.',
+      'Line up four of your colour — across, up and down, or diagonally — to win the game.',
+      'Fill the board with no four in a row and it’s a draw.',
+      'In a match, players take turns going first. First to win the majority takes the match.',
+      'Tip: on your turn, press 1–7 to drop in a column.',
+    ],
   },
   {
     id: 'gin-rummy',
