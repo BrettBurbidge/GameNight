@@ -38,7 +38,7 @@ src/                    React client
 
 - **Server-authoritative.** Clients send actions; the server validates them against the game, then sends each player their own `view(state, playerId)`, so hidden cards and secret words never reach the wrong player.
 - **Identity.** The browser generates a random id plus a secret and stores them in `localStorage`. The secret lets a player reclaim their seat after a refresh or dropped connection. The only "sign-in" step is choosing a name and an avatar.
-- **Lobby behaviour.** The host changes settings, adds bots, moves players between teams, and can remove players. If the host leaves, hosting passes to someone else. When people arrive after the game has started, they take over a bot's seat (Hearts), join the smaller team (Don’t Say It!), or watch.
+- **Lobby behaviour.** The host changes settings, adds bots, moves players between teams, and can remove players. If the host leaves, hosting passes to someone else. When people arrive after the game has started, they take over a bot's seat, join a team, or watch live as spectators. People who open the invite to a full lobby wait as spectators and get the next open seat; the host can also move players between seats and watchers (handy for winner-stays rotations).
 - **Live streams.** Games that need high-frequency data (Sketch It's brush strokes) use `stream()` and `streamSync()`. Accepted data is relayed straight to the room without a full snapshot, and anyone who joins or reconnects catches up from `streamSync()`.
 - **Bots and timers.** Games return bot moves from `bot()` and advance timers in `tick()`; the room manager schedules both. Bots pause while every human is disconnected.
 

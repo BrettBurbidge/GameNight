@@ -9,6 +9,8 @@ interface RoomPlayer extends PlayerInfo {
   secret: string | null;
   sockets: Set<string>;
   joinedAt: number;
+  /** A spectator who chose to watch, so they aren't pulled into open seats automatically. */
+  watchByChoice: boolean;
 }
 
 interface Room {
@@ -40,6 +42,8 @@ const BOT_PERSONAS = [
 const MAX_CHAT = 100;
 const IDLE_ROOM_MS = 1000 * 60 * 60 * 3;
 const LOBBY_GRACE_MS = 30_000;
+/** Seated players plus spectators. */
+const MAX_PEOPLE_PER_ROOM = 40;
 
 const sanitizeName = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, 20);
 const sanitizeAvatar = (s: unknown) => [...String(s ?? '')].slice(0, 2).join('') || '🙂';
@@ -173,6 +177,35 @@ export class RoomManager {
         }
         room.players = room.players.filter((p) => p.id !== playerId);
         if (!target.isBot) this.announce(room, `${target.name} was removed by the host.`);
+        if (room.status === 'lobby') this.fillOpenSeats(room);
+      }),
+    );
+
+    // Move a spectator into a seat (host, or the spectator themselves).
+    on<{ playerId: PlayerId }>('room:seat', ({ playerId }) =>
+      this.inRoom(socket, (room, me) => {
+        if (room.status !== 'lobby') return 'Seats can only change in the lobby.';
+        if (playerId !== me.id && room.hostId !== me.id) return 'Only the host can seat other players.';
+        const target = this.player(room, playerId);
+        if (!target || !target.spectator) return 'That player is already seated.';
+        const err = this.seatSpectator(room, target);
+        if (err) return err;
+        this.announce(room, `${target.name} took a seat.`);
+      }),
+    );
+
+    // Move a seated player to the watchers (host, or the player themselves).
+    on<{ playerId: PlayerId }>('room:watch', ({ playerId }) =>
+      this.inRoom(socket, (room, me) => {
+        if (room.status !== 'lobby') return 'Seats can only change in the lobby.';
+        if (playerId !== me.id && room.hostId !== me.id) return 'Only the host can move other players.';
+        const target = this.player(room, playerId);
+        if (!target || target.isBot || target.spectator) return 'That player is already watching.';
+        target.spectator = true;
+        target.watchByChoice = true;
+        target.team = null;
+        this.announce(room, `${target.name} is watching${playerId === me.id ? '' : ' (moved by the host)'}.`);
+        this.fillOpenSeats(room);
       }),
     );
 
@@ -206,8 +239,9 @@ export class RoomManager {
         room.status = 'lobby';
         room.state = null;
         room.players = room.players.filter((p) => p.isBot || p.connected || p.id === room.hostId);
-        for (const p of room.players) p.spectator = false;
         this.announce(room, 'Back to the lobby.');
+        // People who arrived mid-game get first dibs on open or bot seats for the next game.
+        this.fillOpenSeats(room, { replaceBots: true });
       }),
     );
 
@@ -260,6 +294,7 @@ export class RoomManager {
     if (player && player.secret !== identity.secret) return 'That seat belongs to someone else.';
 
     if (!player) {
+      if (room.players.filter((p) => !p.isBot).length >= MAX_PEOPLE_PER_ROOM) return 'This room is full.';
       player = {
         id: identity.id,
         secret: identity.secret,
@@ -272,14 +307,16 @@ export class RoomManager {
         team: null,
         sockets: new Set(),
         joinedAt: Date.now(),
+        watchByChoice: false,
       };
       if (room.status === 'lobby') {
+        // Take an open seat (or a bot's); if the table is full of people, wait as a spectator.
         if (this.activeCount(room) >= room.meta.maxPlayers) {
-          const bot = room.players.find((p) => p.isBot);
-          if (!bot) return 'This lobby is full.';
-          room.players = room.players.filter((p) => p !== bot);
+          const bot = room.players.find((p) => p.isBot && !p.spectator);
+          if (bot) room.players = room.players.filter((p) => p !== bot);
+          else player.spectator = true;
         }
-        if (room.meta.teams) player.team = this.smallestTeam(room);
+        if (room.meta.teams && !player.spectator) player.team = this.smallestTeam(room);
         room.players.push(player);
       } else {
         room.players.push(player);
@@ -357,6 +394,7 @@ export class RoomManager {
       if (!room.players.includes(player)) return;
       room.players = room.players.filter((p) => p !== player);
       this.announce(room, `${player.name} left.`);
+      if (room.status === 'lobby' && !player.spectator) this.fillOpenSeats(room);
     } else {
       this.announce(room, `${player.name} disconnected.`);
     }
@@ -382,6 +420,33 @@ export class RoomManager {
     return null;
   }
 
+  /** Seats a spectator in an open seat, or in place of a bot. */
+  private seatSpectator(room: Room, p: RoomPlayer): string | null {
+    if (this.activeCount(room) >= room.meta.maxPlayers) {
+      const bot = room.players.find((b) => b.isBot && !b.spectator);
+      if (!bot) return 'There are no open seats.';
+      room.players = room.players.filter((b) => b !== bot);
+    }
+    p.spectator = false;
+    p.watchByChoice = false;
+    p.team = room.meta.teams ? this.smallestTeam(room) : null;
+    return null;
+  }
+
+  /** Lobby only: moves waiting spectators (longest-waiting first) into open seats. */
+  private fillOpenSeats(room: Room, { replaceBots = false } = {}) {
+    const waiting = room.players
+      .filter((p) => p.spectator && !p.isBot && !p.watchByChoice && p.connected)
+      .sort((a, b) => a.joinedAt - b.joinedAt);
+    for (const p of waiting) {
+      const open = this.activeCount(room) < room.meta.maxPlayers;
+      const botSeat = replaceBots && room.players.some((b) => b.isBot && !b.spectator);
+      if (!open && !botSeat) break;
+      this.seatSpectator(room, p);
+      this.announce(room, `${p.name} took an open seat.`);
+    }
+  }
+
   private addBot(room: Room): RoomPlayer {
     const used = new Set(room.players.map((p) => p.name));
     const persona = BOT_PERSONAS.find((b) => !used.has(b.name)) ?? { name: `Bot ${room.players.length}`, avatar: '🤖' };
@@ -397,6 +462,7 @@ export class RoomManager {
       team: room.meta.teams ? this.smallestTeam(room) : null,
       sockets: new Set(),
       joinedAt: Date.now(),
+      watchByChoice: false,
     };
     room.players.push(bot);
     return bot;

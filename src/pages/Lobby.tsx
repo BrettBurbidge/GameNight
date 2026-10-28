@@ -12,7 +12,11 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
   const toast = useToast();
   const isHost = room.hostId === room.you;
   const active = room.players.filter((p) => !p.spectator);
+  const watchers = room.players.filter((p) => p.spectator);
   const humans = active.filter((p) => !p.isBot).length;
+  const me = playersById[room.you];
+  // A spectator can sit in an empty seat or take a bot's place.
+  const seatAvailable = active.length < meta.maxPlayers || active.some((p) => p.isBot);
   const teamsChosen = !meta.teams?.whenConfig || room.config[meta.teams.whenConfig.key] === meta.teams.whenConfig.value;
   const showTeams = !!meta.teams && teamsChosen && active.length >= (meta.teams.from ?? 0);
 
@@ -21,13 +25,19 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
     if (!res.ok) toast(res.error, 'error');
   };
 
+  const watchingNote = watchers.length ? ` · ${watchers.length} watching` : '';
   const seatsNote = meta.fillWithBots
-    ? `${humans} of ${meta.maxPlayers} seats filled by people${active.length < meta.maxPlayers ? ' — bots take the rest' : ''}`
-    : `${active.length} / ${meta.maxPlayers} players${active.length < meta.minPlayers ? ` · need ${meta.minPlayers}+` : ''}`;
+    ? `${humans} of ${meta.maxPlayers} seats filled by people${active.length < meta.maxPlayers ? ' — bots take the rest' : ''}${watchingNote}`
+    : `${active.length} / ${meta.maxPlayers} players${active.length < meta.minPlayers ? ` · need ${meta.minPlayers}+` : ''}${watchingNote}`;
+
+  const toWatchers = (p: PlayerInfo) =>
+    isHost && !p.isBot && !p.spectator && p.id !== room.you ? (
+      <button className="btn btn-ghost btn-sm" title="Move to watchers" onClick={() => call('room:watch', { playerId: p.id })}>👁</button>
+    ) : null;
 
   const row = (p: PlayerInfo, extra?: React.ReactNode) => (
     <motion.div key={p.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-      <PlayerRow player={p} hostId={room.hostId} you={room.you} isHost={isHost} extra={extra} />
+      <PlayerRow player={p} hostId={room.hostId} you={room.you} isHost={isHost} extra={<>{extra}{toWatchers(p)}</>} />
     </motion.div>
   );
 
@@ -102,6 +112,37 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
                 ))}
               </AnimatePresence>
             </div>
+          )}
+
+          {me?.spectator && (
+            <div className="lobby-note row spread wrap">
+              <span>👁 You’re watching{seatAvailable ? '.' : ' — you’ll get the next open seat.'}</span>
+              {seatAvailable && <button className="btn btn-sm btn-primary" onClick={() => call('room:seat', { playerId: room.you })}>Take a seat</button>}
+            </div>
+          )}
+
+          {watchers.length > 0 && (
+            <div className="stack watchers" style={{ '--gap': '6px' } as React.CSSProperties}>
+              <span className="tiny muted">Watching ({watchers.length})</span>
+              <div className="seat-grid">
+                <AnimatePresence>
+                  {watchers.map((p) =>
+                    row(
+                      p,
+                      isHost && p.id !== room.you && seatAvailable ? (
+                        <button className="btn btn-sm" title="Give this player a seat" onClick={() => call('room:seat', { playerId: p.id })}>Seat</button>
+                      ) : undefined,
+                    ),
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
+
+          {me && !me.spectator && (
+            <button className="btn btn-ghost btn-sm just-watch" onClick={() => call('room:watch', { playerId: room.you })}>
+              👁 I’ll just watch
+            </button>
           )}
 
           <hr className="divider" />

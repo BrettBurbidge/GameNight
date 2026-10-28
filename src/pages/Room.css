@@ -87,3 +87,5 @@
 .player-name-edit { all: unset; cursor: pointer; display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-name-edit:hover { color: var(--accent-a); }
 .player-name-edit:focus-visible { outline: 2px solid var(--accent-a); border-radius: 4px; }
+.just-watch { align-self: flex-start; color: var(--text-dim); }
+.watchers .player-row { background: transparent; border: 1px dashed var(--border-strong); }
