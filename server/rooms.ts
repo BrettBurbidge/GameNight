@@ -218,10 +218,34 @@ export class RoomManager {
       }),
     );
 
+    // Live game data: relayed to the rest of the room without a full snapshot broadcast.
+    socket.on('game:stream', (data: unknown) => {
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      if (!room || room.status !== 'playing' || !room.def.stream || !socket.data.playerId) return;
+      try {
+        const out = room.def.stream(room.state, socket.data.playerId, data, this.ctx(room));
+        if (out !== null && out !== undefined) socket.to(room.code).emit('game:stream', out);
+        room.lastActive = Date.now();
+      } catch (err) {
+        console.error('[game:stream]', err);
+      }
+    });
+
+    on('game:stream-sync', () =>
+      this.inRoom(socket, (room, me) => {
+        if (room.status === 'lobby' || !room.def.streamSync) return { data: null };
+        return { data: room.def.streamSync(room.state, me.id) };
+      }),
+    );
+
     on<{ text: string }>('chat:send', ({ text }) =>
       this.inRoom(socket, (room, me) => {
         const clean = String(text ?? '').trim().slice(0, 300);
         if (!clean) return;
+        if (room.status === 'playing' && room.def.filterChat) {
+          const blocked = room.def.filterChat(room.state, me.id, clean);
+          if (blocked) return blocked;
+        }
         this.pushChat(room, { id: randomUUID(), playerId: me.id, text: clean, ts: Date.now() });
       }),
     );
@@ -450,6 +474,7 @@ export class RoomManager {
       now: Date.now(),
       random: Math.random,
       announce: (text) => this.announce(room, text),
+      isConnected: (id) => !!room.players.find((p) => p.id === id && p.connected),
     };
   }
 

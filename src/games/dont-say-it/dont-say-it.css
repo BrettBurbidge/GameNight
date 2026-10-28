@@ -22,13 +22,6 @@
 .dsi-member.giver::after { content: '🎙️'; font-size: 12px; }
 
 .dsi-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-.timer { position: relative; width: 104px; height: 104px; }
-.timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.timer-track { fill: rgba(0,0,0,.25); stroke: var(--surface-2); stroke-width: 7; }
-.timer-fill { fill: none; stroke: var(--active); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s; }
-.timer-text { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 34px; font-weight: 700; }
-.timer.urgent .timer-fill { stroke: var(--bad); }
-.timer.urgent { animation: throb 1s ease-in-out infinite; }
 @keyframes throb { 50% { transform: scale(1.06); } }
 
 /* ---------- stage ---------- */
@@ -117,8 +110,8 @@
   .dsi-scoreboard, .dsi-scoreboard.coop { grid-template-columns: 1fr 1fr; }
   .dsi-scoreboard.coop .dsi-team { grid-column: 1 / -1; }
   .dsi-center { grid-column: 1 / -1; order: -1; flex-direction: row; }
-  .timer { width: 76px; height: 76px; }
-  .timer-text { font-size: 26px; }
+  .dsi .timer { width: 76px; height: 76px; }
+  .dsi .timer-text { font-size: 26px; }
   .dsi-member span { display: none; }
   .dsi-member { padding: 2px; }
   .dsi-card { width: 240px; min-height: 300px; }

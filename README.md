@@ -2,8 +2,8 @@
 
 Browser games to play remotely with friends. There are no accounts: pick a game, open a lobby, share the invite link (`/join/CODE`), and play.
 
-**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16) and Hearts (4 seats; bots fill the empty ones).
-**On the roadmap (listed as "coming soon" in the catalog):** Spades, Code Words, Sketch It, On the Dial, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Four in a Row, Gin Rummy.
+**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals) and Hearts (4 seats; bots fill the empty ones).
+**On the roadmap (listed as "coming soon" in the catalog):** Spades, Code Words, On the Dial, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Four in a Row, Gin Rummy.
 
 ## Running it
 
@@ -39,6 +39,7 @@ src/                    React client
 - **Server-authoritative.** Clients send actions; the server validates them against the game, then sends each player their own `view(state, playerId)`, so hidden cards and secret words never reach the wrong player.
 - **Identity.** The browser generates a random id plus a secret and stores them in `localStorage`. The secret lets a player reclaim their seat after a refresh or dropped connection. The only "sign-in" step is choosing a name and an avatar.
 - **Lobby behaviour.** The host changes settings, adds bots, moves players between teams, and can remove players. If the host leaves, hosting passes to someone else. When people arrive after the game has started, they take over a bot's seat (Hearts), join the smaller team (Don’t Say It!), or watch.
+- **Live streams.** Games that need high-frequency data (Sketch It's brush strokes) use `stream()` and `streamSync()`. Accepted data is relayed straight to the room without a full snapshot, and anyone who joins or reconnects catches up from `streamSync()`.
 - **Bots and timers.** Games return bot moves from `bot()` and advance timers in `tick()`; the room manager schedules both. Bots pause while every human is disconnected.
 
 ## Adding a game

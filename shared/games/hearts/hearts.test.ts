@@ -18,7 +18,7 @@ const players: PlayerInfo[] = ['a', 'b', 'c', 'd'].map((id) => ({
 test('four bots play a full game of Hearts to completion', () => {
   for (const seed of [1, 2, 3, 42, 99]) {
     let now = 0;
-    const ctx = (): GameContext => ({ now, random: seededRandom(seed + now), announce: () => {} });
+    const ctx = (): GameContext => ({ now, random: seededRandom(seed + now), announce: () => {}, isConnected: () => true });
     const state = hearts.setup(players, { targetScore: 100 }, ctx());
     let steps = 0;
     while (!hearts.isFinished(state) && steps++ < 20000) {
@@ -43,7 +43,7 @@ test('four bots play a full game of Hearts to completion', () => {
 
 test('first lead must be the two of clubs and hearts cannot be led early', () => {
   let now = 0;
-  const ctx = (): GameContext => ({ now, random: seededRandom(7), announce: () => {} });
+  const ctx = (): GameContext => ({ now, random: seededRandom(7), announce: () => {}, isConnected: () => true });
   const state = hearts.setup(players, {}, ctx());
   for (const p of players) hearts.action(state, p.id, hearts.bot!(state, p.id, ctx())!, ctx());
   assert.equal(state.phase, 'playing');

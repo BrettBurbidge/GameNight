@@ -1,0 +1,10 @@
+.timer { position: relative; width: 104px; height: 104px; flex-shrink: 0; }
+.timer.small { width: 58px; height: 58px; }
+.timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-track { fill: rgba(0,0,0,.25); stroke: var(--surface-2); stroke-width: 7; }
+.timer-fill { fill: none; stroke: var(--active, var(--accent-a)); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s; }
+.timer-text { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 34px; font-weight: 700; }
+.timer.small .timer-text { font-size: 20px; }
+.timer.urgent .timer-fill { stroke: var(--bad); }
+.timer.urgent { animation: timer-throb 1s ease-in-out infinite; }
+@keyframes timer-throb { 50% { transform: scale(1.06); } }

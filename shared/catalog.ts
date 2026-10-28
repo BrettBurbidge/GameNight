@@ -26,7 +26,11 @@ export interface GameMeta {
   /** Empty seats are filled with bots when the game starts. */
   fillWithBots?: boolean;
   /** `from`: below this many players everyone plays on one team (co-op). */
-  teams?: { names: string[]; colors: string[]; from?: number };
+  /**
+   * `from`: below this many players everyone plays on one team (co-op).
+   * `whenConfig`: teams only apply when the host picks this setting.
+   */
+  teams?: { names: string[]; colors: string[]; from?: number; whenConfig?: { key: string; value: string } };
   config?: ConfigOption[];
   howToPlay?: string[];
 }
@@ -163,14 +167,63 @@ export const GAMES: GameMeta[] = [
     id: 'sketch',
     name: 'Sketch It',
     tagline: 'Draw it fast. Guess it faster.',
-    description: 'A live shared canvas: one player draws, everyone races to guess. Points for speed.',
+    description:
+      'One player draws a secret word on a live shared canvas while everyone else races to guess it. Play everyone-for-themselves at any size, or split 4+ players into teams with buzzer-beater steals.',
     emoji: '🎨',
-    minPlayers: 3,
+    minPlayers: 2,
     maxPlayers: 12,
     minutes: '15–30',
-    status: 'soon',
+    status: 'live',
     accent: ['#22c55e', '#eab308'],
     tags: ['Party', 'Drawing'],
+    teams: { names: ['Team Ink', 'Team Paint'], colors: ['#38bdf8', '#facc15'], from: 4, whenConfig: { key: 'mode', value: 'teams' } },
+    config: [
+      {
+        key: 'mode',
+        label: 'Mode',
+        default: 'ffa',
+        options: [
+          { value: 'ffa', label: 'Everyone for themselves' },
+          { value: 'teams', label: 'Teams (4+)' },
+        ],
+      },
+      {
+        key: 'drawSeconds',
+        label: 'Draw time',
+        default: 80,
+        options: [
+          { value: 60, label: '60 sec' },
+          { value: 80, label: '80 sec' },
+          { value: 120, label: '120 sec' },
+        ],
+      },
+      {
+        key: 'rounds',
+        label: 'Rounds',
+        default: 3,
+        options: [
+          { value: 2, label: '2' },
+          { value: 3, label: '3' },
+          { value: 5, label: '5' },
+        ],
+      },
+      {
+        key: 'hints',
+        label: 'Letter hints',
+        default: 'on',
+        options: [
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ],
+      },
+    ],
+    howToPlay: [
+      'Players take turns drawing. The drawer picks one of three words — easy, medium or hard.',
+      'Everyone else types guesses. You see blanks for each letter, and a few letters appear as time runs down.',
+      'Guess faster for more points (100–300). The drawer earns points for every player who gets it.',
+      'Teams mode (4+): only the drawer’s team guesses. If time runs out, the other team gets 10 seconds to steal for 150 points.',
+      'Most points after the last round wins.',
+    ],
   },
   {
     id: 'wavelength',

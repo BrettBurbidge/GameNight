@@ -25,7 +25,7 @@ test('typed clues using forbidden words are caught', () => {
 
 test('a turn scores and rotates to the other team', () => {
   let now = 1000;
-  const ctx = (): GameContext => ({ now, random: () => 0.3, announce: () => {} });
+  const ctx = (): GameContext => ({ now, random: () => 0.3, announce: () => {}, isConnected: () => true });
   const players: PlayerInfo[] = ['a', 'b', 'c', 'd'].map((id, i) => ({
     id, name: id, avatar: '', color: '', isBot: false, connected: true, spectator: false, team: i % 2,
   }));
@@ -50,7 +50,7 @@ test('a turn scores and rotates to the other team', () => {
 
 test('two players play co-op, alternating clue giver, and latecomers join the same team', () => {
   let now = 1000;
-  const ctx = (): GameContext => ({ now, random: () => 0.7, announce: () => {} });
+  const ctx = (): GameContext => ({ now, random: () => 0.7, announce: () => {}, isConnected: () => true });
   const players: PlayerInfo[] = ['a', 'b'].map((id, i) => ({
     id, name: id, avatar: '', color: '', isBot: false, connected: true, spectator: false, team: i,
   }));

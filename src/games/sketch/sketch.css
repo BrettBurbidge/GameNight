@@ -1,0 +1,119 @@
+.sk { display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------- top bar ---------- */
+.sk-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 10px 16px; }
+.sk-round { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sk-drawer { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; flex-wrap: wrap; }
+.sk-team-chip { color: var(--team); border-color: color-mix(in srgb, var(--team) 50%, transparent); }
+.sk-timer { justify-self: end; }
+.sk-word { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-height: 52px; justify-content: center; }
+.sk-word-text { font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: .02em; text-transform: capitalize; }
+.sk-mask { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.sk-blank {
+  width: 22px; height: 30px; border-bottom: 3px solid var(--text-dim);
+  font-family: var(--font-display); font-size: 24px; font-weight: 700; text-transform: uppercase;
+  display: grid; place-items: end center; line-height: 1;
+}
+.sk-blank.shown { border-color: var(--accent-a); color: var(--accent-b); animation: pop .4s cubic-bezier(.3,1.6,.5,1); }
+.sk-gap { width: 14px; }
+@keyframes pop { from { transform: scale(.3); } }
+
+/* ---------- players ---------- */
+.sk-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.sk-strip.teams { display: grid; grid-template-columns: 1fr 1fr; }
+.sk-player {
+  display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); position: relative;
+}
+.sk-player.me { border-color: var(--border-strong); }
+.sk-player.drawing { border-color: var(--accent-a); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-a) 35%, transparent); }
+.sk-player.guessed { background: rgba(52, 211, 153, .15); border-color: rgba(52, 211, 153, .5); }
+.sk-player-info { display: flex; flex-direction: column; line-height: 1.1; }
+.sk-player-name { font-size: 13px; font-weight: 600; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-player-score { font-size: 11px; color: var(--text-dim); font-weight: 700; }
+.sk-badge { font-size: 13px; }
+.sk-team {
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--team) 8%, transparent); border: 1px solid color-mix(in srgb, var(--team) 30%, transparent);
+  display: flex; flex-direction: column; gap: 8px; transition: box-shadow .3s, border-color .3s;
+}
+.sk-team.active { border-color: var(--team); box-shadow: 0 0 0 1px var(--team); }
+.sk-team-head { display: flex; justify-content: space-between; align-items: center; color: var(--team); font-family: var(--font-display); font-weight: 600; }
+.sk-team-head b { font-size: 22px; color: var(--text); display: inline-block; }
+.sk-team-members { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---------- canvas ---------- */
+.sk-main { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; align-items: start; }
+.sk-stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sk-canvas-wrap { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow), 0 0 0 1px var(--border); background: #fff; }
+.sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; touch-action: auto; }
+.sk-canvas.can-draw { cursor: crosshair; touch-action: none; }
+.sk-canvas.can-draw.tool-fill { cursor: cell; }
+.sk-steal {
+  position: absolute; top: 12px; left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 3;
+  padding: 8px 18px; border-radius: 999px; font-weight: 700; color: white; white-space: nowrap;
+  background: linear-gradient(135deg, #ef4444, #f97316); box-shadow: 0 10px 30px -8px rgba(239, 68, 68, .8);
+}
+.sk-overlay {
+  position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; padding: 20px; text-align: center;
+  background: rgba(11, 11, 26, .78); backdrop-filter: blur(4px); color: var(--text);
+}
+.sk-choices { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.sk-choice {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 22px; min-width: 140px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid var(--border-strong); background: var(--surface-solid); color: var(--text);
+}
+.sk-choice b { font-family: var(--font-display); font-size: 22px; text-transform: capitalize; }
+.sk-choice:hover { border-color: var(--accent-a); box-shadow: var(--glow); }
+.sk-choice:nth-child(1) .tiny { color: var(--good); }
+.sk-choice:nth-child(2) .tiny { color: var(--warn); }
+.sk-choice:nth-child(3) .tiny { color: var(--bad); }
+.sk-reveal h1 { font-size: clamp(32px, 6vw, 52px); text-transform: capitalize; }
+.sk-headline { font-weight: 700; font-size: 18px; }
+.sk-points { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--good); }
+.sk-scorers { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 520px; }
+.sk-over h1 { font-size: clamp(26px, 4.5vw, 40px); }
+.sk-final { font-family: var(--font-display); font-size: 56px; font-weight: 700; display: flex; gap: 18px; }
+.sk-podium { display: flex; align-items: flex-end; gap: 10px; }
+.sk-step { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 110px; }
+.sk-step span { font-size: 12px; color: var(--text-dim); }
+.sk-plinth { width: 100%; border-radius: 10px 10px 0 0; background: var(--surface-2); display: grid; place-items: center; font-size: 26px; }
+.sk-step.place-1 { order: 2; } .sk-step.place-1 .sk-plinth { height: 80px; background: linear-gradient(180deg, rgba(250, 204, 21, .35), rgba(250, 204, 21, .1)); }
+.sk-step.place-2 { order: 1; } .sk-step.place-2 .sk-plinth { height: 56px; }
+.sk-step.place-3 { order: 3; } .sk-step.place-3 .sk-plinth { height: 40px; }
+
+/* ---------- tools ---------- */
+.sk-tools { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.sk-colors { display: flex; gap: 6px; flex-wrap: wrap; }
+.sk-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; transition: transform .12s; }
+.sk-swatch:hover { transform: scale(1.12); }
+.sk-swatch.on { border-color: white; box-shadow: 0 0 0 3px var(--accent-a); transform: scale(1.12); }
+.sk-toolrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.sk-size { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; cursor: pointer; }
+.sk-size i { border-radius: 50%; background: var(--text); display: block; max-width: 24px; max-height: 24px; }
+.sk-size.on { border-color: var(--accent-a); background: color-mix(in srgb, var(--accent-a) 25%, transparent); }
+.sk-sep { width: 1px; height: 26px; background: var(--border); margin: 0 4px; }
+
+/* ---------- feed ---------- */
+.sk-feed { display: flex; flex-direction: column; gap: 8px; padding: 12px; height: 100%; min-height: 320px; max-height: 620px; }
+.sk-feed-list { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.sk-msg { line-height: 1.35; word-wrap: break-word; }
+.sk-msg.correct { color: var(--good); font-weight: 600; }
+.sk-msg.steal { color: #fdba74; font-weight: 700; }
+.sk-msg.close { color: var(--warn); font-style: italic; }
+.sk-msg.insider { padding: 2px 6px; border-radius: 6px; background: rgba(52, 211, 153, .1); }
+.sk-guess .input:disabled { opacity: .6; }
+
+@media (max-width: 980px) {
+  .sk-main { grid-template-columns: 1fr; }
+  .sk-feed { min-height: 220px; max-height: 300px; }
+}
+@media (max-width: 600px) {
+  .sk-top { grid-template-columns: 1fr auto; }
+  .sk-word { grid-column: 1 / -1; order: 3; }
+  .sk-strip.teams { grid-template-columns: 1fr; }
+  .sk-player-name { max-width: 70px; }
+  .sk-blank { width: 16px; font-size: 18px; }
+  .sk-choice { min-width: 100px; padding: 12px 14px; }
+  .sk-choice b { font-size: 18px; }
+}

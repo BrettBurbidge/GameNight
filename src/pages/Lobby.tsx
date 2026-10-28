@@ -13,7 +13,8 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
   const isHost = room.hostId === room.you;
   const active = room.players.filter((p) => !p.spectator);
   const humans = active.filter((p) => !p.isBot).length;
-  const showTeams = !!meta.teams && active.length >= (meta.teams.from ?? 0);
+  const teamsChosen = !meta.teams?.whenConfig || room.config[meta.teams.whenConfig.key] === meta.teams.whenConfig.value;
+  const showTeams = !!meta.teams && teamsChosen && active.length >= (meta.teams.from ?? 0);
 
   const call = async (event: string, payload: object = {}) => {
     const res = await request(event, payload);
@@ -47,9 +48,14 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
             </div>
           </div>
 
-          {meta.teams?.from && active.length < meta.teams.from && (
+          {meta.teams?.from && active.length < meta.teams.from && !meta.teams.whenConfig && (
             <div className="lobby-note">
               🤝 With fewer than {meta.teams.from} players you’ll all play together as one team. Once {meta.teams.from}+ join, you’ll split into rival teams.
+            </div>
+          )}
+          {meta.teams?.whenConfig && teamsChosen && active.length < (meta.teams.from ?? 0) && (
+            <div className="lobby-note">
+              Teams need at least {meta.teams.from} players. Until more people join, you’ll play everyone-for-themselves.
             </div>
           )}
           {showTeams ? (

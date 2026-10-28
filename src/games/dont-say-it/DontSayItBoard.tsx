@@ -4,6 +4,7 @@ import { getGameMeta } from '../../../shared/catalog';
 import type { DontSayItAction, DontSayItView } from '../../../shared/games/dont-say-it/types';
 import { Avatar } from '../../components/Avatar';
 import { Confetti } from '../../components/Confetti';
+import { TimerRing } from '../../components/TimerRing';
 import { request } from '../../lib/socket';
 import { useNow } from '../../lib/useNow';
 import type { BoardProps } from '../types';
@@ -72,23 +73,6 @@ function TeamPanel({ team, view, playersById }: { team: 0 | 1; view: DontSayItVi
         })}
       </div>
     </motion.div>
-  );
-}
-
-function TimerRing({ remaining, total, live }: { remaining: number; total: number; live: boolean }) {
-  const r = 44;
-  const c = 2 * Math.PI * r;
-  const frac = Math.max(0, Math.min(1, remaining / total));
-  const secs = Math.ceil(remaining / 1000);
-  const urgent = live && secs <= 10;
-  return (
-    <div className={`timer ${urgent ? 'urgent' : ''}`}>
-      <svg viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={r} className="timer-track" />
-        <circle cx="50" cy="50" r={r} className="timer-fill" strokeDasharray={c} strokeDashoffset={c * (1 - frac)} />
-      </svg>
-      <span className="timer-text">{secs}</span>
-    </div>
   );
 }
 

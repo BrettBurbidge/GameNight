@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ChatMessage, PlayerInfo } from '../../shared/types';
 import { request } from '../lib/socket';
+import { useToast } from '../lib/toast';
 
 export function Chat({ messages, playersById, compact }: { messages: ChatMessage[]; playersById: Record<string, PlayerInfo>; compact?: boolean }) {
   const [text, setText] = useState('');
+  const toast = useToast();
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -11,11 +13,16 @@ export function Chat({ messages, playersById, compact }: { messages: ChatMessage
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
-  const send = (e: FormEvent) => {
+  const send = async (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    request('chat:send', { text });
+    const message = text;
     setText('');
+    const res = await request('chat:send', { text: message });
+    if (!res.ok) {
+      toast(res.error, 'error');
+      setText(message);
+    }
   };
 
   return (

@@ -6,6 +6,8 @@ export interface GameContext {
   random(): number;
   /** Posts a system line into the room chat. */
   announce(text: string): void;
+  /** Whether a player currently has the room open. */
+  isConnected(playerId: PlayerId): boolean;
 }
 
 /**
@@ -41,6 +43,18 @@ export interface GameDefinition<S = any, A = any, V = any> {
 
   /** Hand a seat to someone else (bot -> late joiner, or dropped human -> bot). */
   swapPlayer?(state: S, fromId: PlayerId, toId: PlayerId): void;
+
+  /**
+   * High-frequency data (e.g. brush strokes) that skips the full-snapshot broadcast.
+   * Validate and record it, then return what to relay to everyone else in the room, or null to drop it.
+   */
+  stream?(state: S, playerId: PlayerId, data: unknown, ctx: GameContext): unknown | null;
+
+  /** Everything streamed so far, for players who join or reconnect mid-stream. */
+  streamSync?(state: S, playerId: PlayerId): unknown;
+
+  /** Return an error to block a room chat message (e.g. one that spoils the answer). */
+  filterChat?(state: S, playerId: PlayerId, text: string): string | null;
 
   isFinished(state: S): boolean;
 }

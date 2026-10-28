@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { HeartsBoard } from './hearts/HeartsBoard';
+import { SketchBoard } from './sketch/SketchBoard';
 import { DontSayItBoard } from './dont-say-it/DontSayItBoard';
 import type { BoardProps } from './types';
 
@@ -7,4 +8,5 @@ import type { BoardProps } from './types';
 export const BOARDS: Record<string, ComponentType<BoardProps>> = {
   'dont-say-it': DontSayItBoard,
   hearts: HeartsBoard,
+  sketch: SketchBoard,
 };
