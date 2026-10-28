@@ -62,11 +62,6 @@ if (typeof window !== 'undefined') {
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, unlock, { passive: true });
 }
 
-/** For debugging: 'running', 'suspended', 'closed', or 'unsupported'. */
-export function audioState(): string {
-  return ctx?.state ?? (typeof window !== 'undefined' && 'AudioContext' in window ? 'not started' : 'unsupported');
-}
-
 function tone(ac: AudioContext, opts: { freq: number; to?: number; start: number; dur: number; type?: OscillatorType; gain?: number }) {
   const osc = ac.createOscillator();
   const amp = ac.createGain();
@@ -97,8 +92,8 @@ const SOUNDS: Record<SoundName, (ac: AudioContext) => void> = {
   },
 };
 
-export function playSound(name: SoundName, { ignoreMute = false } = {}) {
-  if (muted && !ignoreMute) return;
+export function playSound(name: SoundName) {
+  if (muted) return;
   const ac = audio();
   if (ac) SOUNDS[name](ac);
 }

@@ -6,7 +6,7 @@ import type { PlayerInfo } from '../../../shared/types';
 import { Avatar } from '../../components/Avatar';
 import { Confetti } from '../../components/Confetti';
 import { request } from '../../lib/socket';
-import { audioState, playSound, type SoundName } from '../../lib/sound';
+import { playSound } from '../../lib/sound';
 import { useNow } from '../../lib/useNow';
 import type { BoardProps } from '../types';
 import { PlayingCard } from './PlayingCard';
@@ -45,7 +45,6 @@ export function HeartsBoard({ view, room, playersById, isHost, act, serverNow }:
         {view.passDir === 'none' && view.phase === 'playing' && view.tricksPlayed === 0 && <span className="chip">No pass this hand</span>}
         <span className={`chip ${view.heartsBroken ? 'broken' : ''}`}>{view.heartsBroken ? '💔 Hearts broken' : '♥ Hearts not broken'}</span>
         <span className="chip">Game to {view.targetScore}</span>
-        {import.meta.env.DEV && <SoundTestButtons />}
       </div>
 
       <div className="hearts-table">
@@ -91,22 +90,6 @@ export function HeartsBoard({ view, room, playersById, isHost, act, serverNow }:
       {view.phase === 'hand-over' && <Scoreboard view={view} playersById={playersById} you={room.you} act={act} serverNow={serverNow} seated={seated} />}
       {view.phase === 'game-over' && <GameOver view={view} playersById={playersById} isHost={isHost} />}
     </div>
-  );
-}
-
-/** TEMPORARY, local dev only: lets us check the sounds without playing a whole hand. */
-function SoundTestButtons() {
-  const [state, setState] = useState(audioState());
-  const test = (name: SoundName) => {
-    playSound(name, { ignoreMute: true });
-    setTimeout(() => setState(audioState()), 100);
-  };
-  return (
-    <span className="row" style={{ '--gap': '6px' } as React.CSSProperties}>
-      <button className="btn btn-sm" onClick={() => test('heartsBroken')}>🔈 Test: hearts broken</button>
-      <button className="btn btn-sm" onClick={() => test('queenOfSpades')}>🔈 Test: Q♠</button>
-      <span className="faint small">audio: {state}</span>
-    </span>
   );
 }
 
