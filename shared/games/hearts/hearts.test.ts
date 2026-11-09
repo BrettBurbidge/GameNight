@@ -52,3 +52,28 @@ test('first lead must be the two of clubs and hearts cannot be led early', () =>
   const other = state.hands[leader].find((c) => c !== '2C')!;
   assert.ok(hearts.action(state, leader, { type: 'play', card: other }, ctx()));
 });
+
+test('table talk events cover the big moments and the table summary never shows hands', () => {
+  let now = 0;
+  const events: string[] = [];
+  const ctx = (): GameContext => ({
+    now, random: seededRandom(5 + now), announce: () => {}, isConnected: () => true,
+    tableTalk: (text) => events.push(text),
+  });
+  const state = hearts.setup(players, { targetScore: 50 }, ctx());
+  const nameOf = (id: string) => `Player-${id}`;
+  for (let steps = 0; !hearts.isFinished(state) && steps < 20000; steps++) {
+    now += 2000;
+    if (hearts.tick!(state, ctx())) continue;
+    const mover = players.find((p) => hearts.bot!(state, p.id, ctx()))!;
+    hearts.action(state, mover.id, hearts.bot!(state, mover.id, ctx())!, ctx());
+    if (state.phase === 'playing' && state.trick.length === 0) {
+      // Between tricks nothing is face up, so no card at all may appear in the summary.
+      const summary = hearts.describeTable!(state, nameOf);
+      assert.ok(!/[♣♦♠♥]/.test(summary), `summary leaked a card: ${summary}`);
+    }
+  }
+  assert.ok(events.some((e) => e.includes('Queen of Spades')), 'the Queen being taken should be reported');
+  assert.ok(events.some((e) => e.startsWith('GAME OVER')), 'the end of the game should be reported');
+  assert.ok(events.every((e) => /\{\{[abcd]\}\}/.test(e) || e.startsWith('GAME OVER')), 'players are referenced by {{id}}');
+});

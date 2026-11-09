@@ -6,6 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
 import { RoomManager } from './rooms';
 
+// Local secrets (ANTHROPIC_API_KEY for bot table talk) live in an untracked .env; hosts set real env vars.
+try {
+  process.loadEnvFile();
+} catch {
+  // No .env file: that's fine.
+}
+
 const PORT = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3001);
 const app = express();
 const http = createServer(app);

@@ -1,4 +1,4 @@
-import { type CardId, fullDeck, rankOf, shuffled, sortHand, suitOf } from '../../cards';
+import { type CardId, fullDeck, rankLabel, rankOf, shuffled, sortHand, SUIT_SYMBOL, suitOf } from '../../cards';
 import type { GameContext, GameDefinition } from '../../game';
 import type { PlayerId } from '../../types';
 import { chooseBotPass, chooseBotPlay } from './bot';
@@ -128,8 +128,19 @@ function completePassing(state: HeartsState) {
   startPlay(state);
 }
 
+const cardName = (c: CardId) => `${rankLabel(c)}${SUIT_SYMBOL[suitOf(c)]}`;
+
 function collectTrick(state: HeartsState, ctx: GameContext) {
   const winner = state.pendingWinner!;
+  const points = state.trick.reduce((s, p) => s + cardPoints(p.card), 0);
+  const plays = state.trick.map((p) => `{{${p.playerId}}} ${cardName(p.card)}`).join(', ');
+  if (state.trick.some((p) => p.card === QUEEN_OF_SPADES)) {
+    const dumper = state.trick.find((p) => p.card === QUEEN_OF_SPADES)!.playerId;
+    const how = dumper === winner ? 'had to eat their own Queen of Spades' : `got stuck with the Queen of Spades (dumped by {{${dumper}}})`;
+    ctx.tableTalk?.(`{{${winner}}} ${how}: ${points} points in one trick (${plays}).`, 0.85);
+  } else if (points >= 3) {
+    ctx.tableTalk?.(`{{${winner}}} took a ${points}-point trick (${plays}).`, 0.25);
+  }
   state.taken[winner].push(...state.trick.map((p) => p.card).filter((c) => cardPoints(c) > 0));
   state.lastTrick = { plays: state.trick, winner };
   state.trick = [];
@@ -148,16 +159,21 @@ function scoreHand(state: HeartsState, ctx: GameContext) {
     for (const id of state.seats) points[id] = id === shooter ? 0 : 26;
     state.moonShooter = shooter;
     ctx.announce('🌙 Someone shot the moon!');
+    ctx.tableTalk?.(`{{${shooter}}} SHOT THE MOON: took every heart and the Queen, so everyone else gets 26.`, 1);
   }
   for (const id of state.seats) state.scores[id] += points[id];
   state.history.push(points);
   state.turn = null;
   state.handNumber++;
+  const tally = state.seats.map((id) => `{{${id}}} +${points[id]} (total ${state.scores[id]})`).join(', ');
   if (state.seats.some((id) => state.scores[id] >= state.targetScore)) {
     state.phase = 'game-over';
+    const won = winners(state).map((id) => `{{${id}}}`).join(' and ');
+    ctx.tableTalk?.(`GAME OVER. ${won} won with the lowest score. Final hand: ${tally}.`, 1);
   } else {
     state.phase = 'hand-over';
     state.handOverUntil = ctx.now + HAND_OVER_MS;
+    ctx.tableTalk?.(`Hand ${state.handNumber} is over. ${tally}.`, 0.4);
   }
 }
 
@@ -233,7 +249,10 @@ export const hearts: GameDefinition<HeartsState, HeartsAction, HeartsView> = {
         state.hands[playerId] = state.hands[playerId].filter((c) => c !== action.card);
         state.trick.push({ playerId, card: action.card });
         state.trickSeq++;
-        if (suitOf(action.card) === 'H') state.heartsBroken = true;
+        if (suitOf(action.card) === 'H' && !state.heartsBroken) {
+          state.heartsBroken = true;
+          ctx.tableTalk?.(`Hearts are broken: {{${playerId}}} played ${cardName(action.card)}.`, 0.15);
+        }
         if (state.trick.length === 4) {
           state.pendingWinner = trickWinner(state.trick);
           state.pauseUntil = ctx.now + TRICK_PAUSE_MS;
@@ -332,6 +351,22 @@ export const hearts: GameDefinition<HeartsState, HeartsAction, HeartsView> = {
       handOverUntil: state.handOverUntil,
       winners: winners(state),
     };
+  },
+
+  describeTable(state, nameOf) {
+    const lines = [
+      `Game: Hearts to ${state.targetScore} points (lowest score wins). Hand ${state.handNumber + (state.phase === 'game-over' ? 0 : 1)}, phase: ${state.phase}.`,
+      `Scores (total / this hand): ${state.seats
+        .map((id) => `${nameOf(id)} ${state.scores[id]} / ${(state.taken[id] ?? []).reduce((s, c) => s + cardPoints(c), 0)}`)
+        .join(', ')}.`,
+    ];
+    if (state.phase === 'passing') lines.push(`Passing ${state.passDir}; waiting on ${state.seats.filter((id) => !state.passes[id]).map(nameOf).join(', ') || 'nobody'}.`);
+    if (state.phase === 'playing') {
+      lines.push(`Trick ${state.tricksPlayed + 1} of 13. Hearts ${state.heartsBroken ? 'broken' : 'not broken yet'}.`);
+      if (state.trick.length) lines.push(`On the table: ${state.trick.map((p) => `${nameOf(p.playerId)} ${cardName(p.card)}`).join(', ')}.`);
+      if (state.turn) lines.push(`${nameOf(state.turn)} to play.`);
+    }
+    return lines.join('\n');
   },
 
   isFinished: (state) => state.phase === 'game-over',

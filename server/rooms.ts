@@ -3,6 +3,8 @@ import type { Server, Socket } from 'socket.io';
 import { defaultConfig, getGameMeta, type GameMeta } from '../shared/catalog';
 import type { GameContext, GameDefinition } from '../shared/game';
 import type { ChatMessage, GameConfig, Identity, PlayerId, PlayerInfo, RoomPeek, RoomSnapshot, RoomStatus } from '../shared/types';
+import { BOT_PERSONAS, type SassLevel } from './bots/personas';
+import { TableTalk } from './bots/tableTalk';
 import { GAME_DEFINITIONS } from './registry';
 
 interface RoomPlayer extends PlayerInfo {
@@ -11,6 +13,8 @@ interface RoomPlayer extends PlayerInfo {
   joinedAt: number;
   /** A spectator who chose to watch, so they aren't pulled into open seats automatically. */
   watchByChoice: boolean;
+  /** Bots only: which personality voices them in chat. */
+  personaId?: string;
 }
 
 interface Room {
@@ -31,14 +35,6 @@ interface Room {
 // No 0/O/1/I/L so codes are easy to read aloud.
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const PLAYER_COLORS = ['#f472b6', '#38bdf8', '#a3e635', '#fbbf24', '#c084fc', '#fb7185', '#2dd4bf', '#f97316', '#818cf8', '#4ade80', '#facc15', '#e879f9', '#60a5fa', '#f87171', '#34d399', '#fcd34d'];
-const BOT_PERSONAS = [
-  { name: 'Robo Rita', avatar: '🤖' },
-  { name: 'Chip', avatar: '👾' },
-  { name: 'Dealer Dan', avatar: '🎩' },
-  { name: 'Byte', avatar: '🦾' },
-  { name: 'Ace', avatar: '🛸' },
-  { name: 'Gizmo', avatar: '⚙️' },
-];
 const MAX_CHAT = 100;
 const IDLE_ROOM_MS = 1000 * 60 * 60 * 3;
 const LOBBY_GRACE_MS = 30_000;
@@ -50,8 +46,18 @@ const sanitizeAvatar = (s: unknown) => [...String(s ?? '')].slice(0, 2).join('')
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
+  private talk: TableTalk;
 
   constructor(private io: Server) {
+    this.talk = new TableTalk({
+      room: (code) => this.talkView(code),
+      post: (code, botId, text) => {
+        const room = this.rooms.get(code);
+        if (!room || !this.player(room, botId)) return;
+        this.pushChat(room, { id: randomUUID(), playerId: botId, text, ts: Date.now() });
+        this.broadcast(room);
+      },
+    });
     setInterval(() => this.tickAll(), 250);
     setInterval(() => this.sweep(), 60_000);
   }
@@ -230,12 +236,14 @@ export class RoomManager {
         room.state = room.def.setup(active.map(publicInfo), room.config, this.ctx(room));
         room.status = 'playing';
         this.announce(room, `Game on! ${room.meta.emoji}`);
+        if (this.talkView(room.code)) this.talk.gameStarted(room.code);
       }),
     );
 
     on('room:reset', () =>
       this.asHost(socket, (room) => {
         this.clearBotTimer(room);
+        this.talk.reset(room.code);
         room.status = 'lobby';
         room.state = null;
         room.players = room.players.filter((p) => p.isBot || p.connected || p.id === room.hostId);
@@ -281,6 +289,7 @@ export class RoomManager {
           if (blocked) return blocked;
         }
         this.pushChat(room, { id: randomUUID(), playerId: me.id, text: clean, ts: Date.now() });
+        this.talk.humanSaid(room.code);
       }),
     );
 
@@ -449,7 +458,9 @@ export class RoomManager {
 
   private addBot(room: Room): RoomPlayer {
     const used = new Set(room.players.map((p) => p.name));
-    const persona = BOT_PERSONAS.find((b) => !used.has(b.name)) ?? { name: `Bot ${room.players.length}`, avatar: '🤖' };
+    // Random order so the same three personalities don't sit down every game.
+    const free = BOT_PERSONAS.filter((b) => !used.has(b.name));
+    const persona = free.length ? free[randomInt(free.length)] : { id: 'generic', name: `Bot ${room.players.length}`, avatar: '🤖' };
     const bot: RoomPlayer = {
       id: `bot_${randomUUID().slice(0, 8)}`,
       secret: null,
@@ -463,6 +474,7 @@ export class RoomManager {
       sockets: new Set(),
       joinedAt: Date.now(),
       watchByChoice: false,
+      personaId: persona.id,
     };
     room.players.push(bot);
     return bot;
@@ -541,6 +553,31 @@ export class RoomManager {
       random: Math.random,
       announce: (text) => this.announce(room, text),
       isConnected: (id) => !!room.players.find((p) => p.id === id && p.connected),
+      tableTalk: (text, weight) => {
+        if (!this.talk.enabled) return;
+        const named = text.replace(/\{\{([^}]+)\}\}/g, (_, id: string) => this.player(room, id)?.name ?? 'someone');
+        this.talk.gameEvent(room.code, named, weight);
+      },
+    };
+  }
+
+  /** What the chatty bots get to know about a room, or null when table talk doesn't apply. */
+  private talkView(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || !this.talk.enabled || room.status === 'lobby') return null;
+    const sass = String(room.config.botSass ?? 'off') as SassLevel;
+    const bots = room.players.filter((p) => p.isBot && !p.spectator);
+    const humans = room.players.filter((p) => !p.isBot && p.connected);
+    if (sass === 'off' || !bots.length || !humans.length) return null;
+    const nameOf = (id: PlayerId | null) => (id && this.player(room, id)?.name) || 'someone';
+    return {
+      gameName: room.meta.name,
+      sass,
+      bots: bots.map((b) => ({ id: b.id, name: b.name, personaId: b.personaId })),
+      humans: humans.map((h) => ({ id: h.id, name: h.name })),
+      chat: room.chat,
+      nameOf,
+      table: room.state && room.def.describeTable ? room.def.describeTable(room.state, nameOf) : null,
     };
   }
 
@@ -609,6 +646,7 @@ export class RoomManager {
 
   private destroy(room: Room) {
     this.clearBotTimer(room);
+    this.talk.reset(room.code);
     this.rooms.delete(room.code);
     console.log(`room ${room.code} closed`);
   }
