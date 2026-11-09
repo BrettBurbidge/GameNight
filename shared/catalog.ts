@@ -126,6 +126,19 @@ export const GAMES: GameMeta[] = [
           { value: 'chill', label: 'Chill' },
         ],
       },
+      {
+        // Read by the server's bot table talk (server/bots). Only does anything when ANTHROPIC_API_KEY is set.
+        key: 'botSass',
+        label: 'Bot trash talk',
+        default: 'playful',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'nice', label: 'Nice' },
+          { value: 'playful', label: 'Playful' },
+          { value: 'snarky', label: 'Snarky' },
+          { value: 'savage', label: 'Extra mean' },
+        ],
+      },
     ],
     howToPlay: [
       'Each hand, pass three cards (left, right, across, then hold).',

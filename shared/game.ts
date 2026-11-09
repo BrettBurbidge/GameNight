@@ -8,6 +8,11 @@ export interface GameContext {
   announce(text: string): void;
   /** Whether a player currently has the room open. */
   isConnected(playerId: PlayerId): boolean;
+  /**
+   * Tell the chatty bots something happened (public information only).
+   * Write player ids as {{id}}; the server swaps in names. `weight` (0–1) is how likely it is to prompt a reaction.
+   */
+  tableTalk?(text: string, weight: number): void;
 }
 
 /**
@@ -55,6 +60,9 @@ export interface GameDefinition<S = any, A = any, V = any> {
 
   /** Return an error to block a room chat message (e.g. one that spoils the answer). */
   filterChat?(state: S, playerId: PlayerId, text: string): string | null;
+
+  /** Plain-text summary of the public table state for the chatty bots. Must not reveal hidden hands. */
+  describeTable?(state: S, nameOf: (id: PlayerId) => string): string;
 
   isFinished(state: S): boolean;
 }
