@@ -2,12 +2,13 @@ import type { GameMeta } from '../../shared/catalog';
 import type { GameConfig } from '../../shared/types';
 import { request } from '../lib/socket';
 
-export function ConfigPanel({ meta, config, editable }: { meta: GameMeta; config: GameConfig; editable: boolean }) {
-  if (!meta.config?.length) return null;
+export function ConfigPanel({ meta, config, editable, hasBots }: { meta: GameMeta; config: GameConfig; editable: boolean; hasBots: boolean }) {
+  const options = (meta.config ?? []).filter((opt) => !opt.forBots || hasBots);
+  if (!options.length) return null;
   return (
     <div className="stack" style={{ '--gap': '10px' } as React.CSSProperties}>
       <span className="tiny muted">Settings</span>
-      {meta.config.map((opt) => (
+      {options.map((opt) => (
         <label key={opt.key} className="config-row">
           <span className="small">{opt.label}</span>
           {editable ? (

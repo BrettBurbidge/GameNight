@@ -13,6 +13,23 @@ export interface GameContext {
    * Write player ids as {{id}}; the server swaps in names. `weight` (0–1) is how likely it is to prompt a reaction.
    */
   tableTalk?(text: string, weight: number): void;
+  /**
+   * The answer to a `botTask` with this key: `undefined` while it is still being worked out,
+   * `null` if it could not be. Tests can stub this to play bots without a model.
+   */
+  thought?(key: string): unknown;
+  /** Whether a seat is held by a bot. */
+  isBot?(playerId: PlayerId): boolean;
+}
+
+/**
+ * Thinking a bot needs done off the game loop (a model call) before it can move.
+ * Bots that would get the same answer share a `key`, so the work is done once.
+ */
+export interface BotTask {
+  key: string;
+  /** Handed to the game's brain on the server. Build it only from what this bot is allowed to see. */
+  request: unknown;
 }
 
 /**
@@ -39,6 +56,12 @@ export interface GameDefinition<S = any, A = any, V = any> {
 
   /** Return the action a bot wants to take right now, or null if it is not its move. */
   bot?(state: S, botId: PlayerId, ctx: GameContext): A | null;
+
+  /**
+   * What this bot needs thought through right now, or null. The server runs it through the game's brain
+   * and exposes the answer as `ctx.thought(key)`; `bot()` then turns it into moves, and is polled while it waits.
+   */
+  botTask?(state: S, botId: PlayerId): BotTask | null;
 
   /** How long bots "think" before acting, in ms. */
   botDelay?(state: S): number;

@@ -1,6 +1,20 @@
-import type { GameContext, GameDefinition } from '../../game';
+import type { BotTask, GameContext, GameDefinition } from '../../game';
 import type { PlayerId, PlayerInfo } from '../../types';
 import { findWordHit } from '../../words';
+import {
+  BOT_SKILLS,
+  CLUE_SPREAD_MS,
+  CLUE_WAIT_MS,
+  PICK_SPREAD_MS,
+  PICK_STEP_MS,
+  PICK_WAIT_MS,
+  choosePicks,
+  roll,
+  type BotSkill,
+  type ClueRequest,
+  type ClueThought,
+  type GuessRequest,
+} from './bot';
 import type { CodeWordsAction, CodeWordsView, Picks, RoundResult, Slot } from './types';
 import { BOARD_WORDS } from './words';
 
@@ -23,6 +37,7 @@ interface CodeWordsState {
   guessSeconds: number;
   endsAt: number | null;
   result: RoundResult | null;
+  botSkill: BotSkill;
 }
 
 export const BOARD_SIZE = 20;
@@ -45,6 +60,47 @@ const teamOf = (state: CodeWordsState, id: PlayerId): 0 | 1 | null =>
   state.teams[0].includes(id) ? 0 : state.teams[1].includes(id) ? 1 : null;
 
 const guessersOf = (state: CodeWordsState, team: 0 | 1) => state.teams[team].filter((id) => id !== state.cipherIds[team]);
+
+const tidyClue = (text: unknown) => String(text ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_CLUE);
+
+/** Why a (tidied) clue is not allowed, or null if it is fine. */
+function clueProblem(text: string, board: string[]): string | null {
+  if (!text) return 'Type a clue first.';
+  if (/\d/.test(text)) return 'No numbers in a clue.';
+  if (text.split(' ').length > MAX_CLUE_WORDS) return 'Two words at most.';
+  const hit = findWordHit(text, board);
+  return hit ? `“${hit}” is on the board — you’ll have to go around it.` : null;
+}
+
+/** What a bot needs worked out before it can move. Built only from what that bot's seat can see. */
+function botTask(state: CodeWordsState, botId: PlayerId): BotTask | null {
+  const team = teamOf(state, botId);
+  if (team === null) return null;
+  const isCipher = state.cipherIds[team] === botId;
+  const live = state.board.map((_, i) => i).filter((i) => state.claimed[i] === null);
+
+  if (state.phase === 'clue' && isCipher && state.clues[team] === null) {
+    const request: ClueRequest = {
+      kind: 'clue',
+      words: live.map((i) => state.board[i]),
+      spent: state.board.filter((_, i) => state.claimed[i] !== null),
+      target: state.board[state.targets[team]],
+      skill: state.botSkill,
+    };
+    return { key: `${state.round}:clue:${team}`, request };
+  }
+  if (state.phase === 'guess' && !isCipher && !state.locked.includes(botId)) {
+    // One reading per team: its bots share it, then each makes up its own mind.
+    const request: GuessRequest = {
+      kind: 'guess',
+      words: live.map((i) => ({ id: i, word: state.board[i] })),
+      ownClue: state.clues[team],
+      theirClue: state.clues[team === 0 ? 1 : 0],
+    };
+    return { key: `${state.round}:guess:${team}`, request };
+  }
+  return null;
+}
 
 /** The next teammate due a turn as cipher, skipping anyone who has dropped off the call. */
 function cipherFor(state: CodeWordsState, team: 0 | 1, ctx: GameContext): PlayerId {
@@ -178,6 +234,7 @@ export const codeWords: GameDefinition<CodeWordsState, CodeWordsAction, CodeWord
       guessSeconds: Number(config.guessSeconds ?? 75),
       endsAt: null,
       result: null,
+      botSkill: BOT_SKILLS.find((s) => s === config.botSkill) ?? 'standard',
     };
     startRound(state, ctx);
     return state;
@@ -193,12 +250,9 @@ export const codeWords: GameDefinition<CodeWordsState, CodeWordsAction, CodeWord
         if (state.phase !== 'clue') return 'The clues are already out.';
         if (!isCipher) return 'Only this round’s cipher sends the clue.';
         if (state.clues[team] !== null) return 'Your clue is already sent.';
-        const text = String(action.text ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_CLUE);
-        if (!text) return 'Type a clue first.';
-        if (/\d/.test(text)) return 'No numbers in a clue.';
-        if (text.split(' ').length > MAX_CLUE_WORDS) return 'Two words at most.';
-        const hit = findWordHit(text, state.board);
-        if (hit) return `“${hit}” is on the board — you’ll have to go around it.`;
+        const text = tidyClue(action.text);
+        const problem = clueProblem(text, state.board);
+        if (problem) return problem;
         state.clues[team] = text;
         if (state.clues[0] !== null && state.clues[1] !== null) openGuessing(state, ctx);
         return;
@@ -243,6 +297,56 @@ export const codeWords: GameDefinition<CodeWordsState, CodeWordsAction, CodeWord
     else if (state.phase === 'guess') resolve(state, ctx);
     else nextRound(state, ctx);
     return true;
+  },
+
+  botTask,
+
+  bot(state, botId, ctx) {
+    const task = botTask(state, botId);
+    if (!task || state.endsAt === null) return null;
+    const thought = ctx.thought?.(task.key);
+    if (thought === undefined) return null; // still thinking
+    const team = teamOf(state, botId)!;
+    const rollFor = (salt: string) => roll(`${botId}:${state.round}:${salt}:${state.board[0]}`);
+
+    if (state.phase === 'clue') {
+      const waited = ctx.now - (state.endsAt - state.clueSeconds * 1000);
+      if (waited < CLUE_WAIT_MS + rollFor('pace') * CLUE_SPREAD_MS) return null;
+      const candidates = (thought as Partial<ClueThought> | null)?.clues;
+      const clue = (Array.isArray(candidates) ? candidates : []).map(tidyClue).find((c) => !clueProblem(c, state.board));
+      // Nothing usable: stay silent and let the clue timer run out, like a cipher who drew a blank.
+      return clue ? { type: 'clue', text: clue } : null;
+    }
+
+    // Guessing: first pick, second pick, lock, each a beat apart.
+    const waited = ctx.now - (state.endsAt - state.guessSeconds * 1000);
+    const first = PICK_WAIT_MS + rollFor('pace') * PICK_SPREAD_MS;
+    if (waited < first) return null;
+    const want = choosePicks(thought, state.botSkill, (i) => Number.isInteger(i) && state.claimed[i] === null, rollFor);
+    if (state.clues[team] === null) want.crack = null;
+    if (state.clues[team === 0 ? 1 : 0] === null) want.intercept = null;
+    const mine = state.picks[botId] ?? { crack: null, intercept: null };
+    if (want.crack !== null && mine.crack !== want.crack) return { type: 'pick', slot: 'crack', wordIndex: want.crack };
+    if (waited < first + PICK_STEP_MS) return null;
+    if (want.intercept !== null && mine.intercept !== want.intercept) return { type: 'pick', slot: 'intercept', wordIndex: want.intercept };
+    if (waited < first + PICK_STEP_MS * 2) return null;
+    // Leave the round open while a human teammate is still deciding: the bot's vote is already on the tally.
+    const stillDeciding = guessersOf(state, team).some(
+      (id) => id !== botId && !ctx.isBot?.(id) && ctx.isConnected(id) && !state.locked.includes(id),
+    );
+    return stillDeciding ? null : { type: 'lock' };
+  },
+
+  botDelay: () => 300,
+
+  swapPlayer(state, from, to) {
+    state.teams = [state.teams[0].map((id) => (id === from ? to : id)), state.teams[1].map((id) => (id === from ? to : id))];
+    state.cipherIds = [state.cipherIds[0] === from ? to : state.cipherIds[0], state.cipherIds[1] === from ? to : state.cipherIds[1]];
+    state.locked = state.locked.map((id) => (id === from ? to : id));
+    if (state.picks[from]) {
+      state.picks[to] = state.picks[from];
+      delete state.picks[from];
+    }
   },
 
   addPlayer(state, player) {

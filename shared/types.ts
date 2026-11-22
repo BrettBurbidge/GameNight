@@ -41,6 +41,8 @@ export interface RoomSnapshot<V = unknown> {
   hostId: PlayerId;
   you: PlayerId;
   players: PlayerInfo[];
+  /** Whether this room can seat bots (some games need the server to have a model key). */
+  bots: boolean;
   config: GameConfig;
   view: V | null;
   chat: ChatMessage[];

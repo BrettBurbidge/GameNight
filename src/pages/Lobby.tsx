@@ -52,7 +52,7 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
             </div>
             <div className="row">
               {isHost && showTeams && <button className="btn btn-sm" onClick={() => call('room:shuffleTeams')}>🔀 Shuffle teams</button>}
-              {isHost && meta.bots && active.length < meta.maxPlayers && (
+              {isHost && room.bots && active.length < meta.maxPlayers && (
                 <button className="btn btn-sm" onClick={() => call('room:addBot')}>🤖 Add bot</button>
               )}
             </div>
@@ -146,7 +146,7 @@ export function Lobby({ room, meta, playersById }: { room: RoomSnapshot; meta: G
           )}
 
           <hr className="divider" />
-          <ConfigPanel meta={meta} config={room.config} editable={isHost} />
+          <ConfigPanel meta={meta} config={room.config} editable={isHost} hasBots={active.some((p) => p.isBot)} />
         </div>
 
         <div className="panel panel-pad lobby-chat">
