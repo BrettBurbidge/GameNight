@@ -302,6 +302,41 @@ export const GAMES: GameMeta[] = [
     ],
   },
   {
+    id: 'open-book',
+    name: 'Open Book',
+    tagline: 'Three chapters of questions. No winners, no filter.',
+    description:
+      'A conversation game for friends on a call. Take turns reading pages that start out silly and end up honest, answer out loud, and finish by writing each other a private note. For adults: nothing is off limits, and anyone can pass on any page.',
+    emoji: '📖',
+    minPlayers: 2,
+    maxPlayers: 8,
+    minutes: '30–90',
+    status: 'live',
+    accent: ['#6366f1', '#f59e0b'],
+    tags: ['Party', 'Conversation', '18+'],
+    config: [
+      {
+        key: 'pagesPerChapter',
+        label: 'Pages per chapter',
+        default: 6,
+        options: [
+          { value: 4, label: '4 (short)' },
+          { value: 6, label: '6' },
+          { value: 9, label: '9' },
+          { value: 12, label: '12 (long night)' },
+        ],
+      },
+    ],
+    howToPlay: [
+      'You’ll need to be on a voice or video call: all the answers are spoken, and nothing is typed until the very end.',
+      'Players take turns as the reader. Each page says who answers: the reader, someone the reader picks, or everyone in turn.',
+      'The book has three chapters. First Pages is light, Between the Lines gets personal, and Unedited has no limits.',
+      'Don’t want to answer? The reader or the person answering can pass for a new page, as often as they like. No explanations needed.',
+      'When the conversation winds down, turn the page. The group can also vote to jump to the next chapter early.',
+      'After the last chapter, everyone writes a short private note to one other player. They’re all delivered at once, and only the person you wrote to can read yours.',
+    ],
+  },
+  {
     id: 'spyfall',
     name: 'Who’s the Spy?',
     tagline: 'Everyone knows the location — except one.',

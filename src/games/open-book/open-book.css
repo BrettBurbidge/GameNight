@@ -1,0 +1,72 @@
+.ob { display: flex; flex-direction: column; gap: 18px; --paper: #fbf5e6; --ink: #2a2440; --active: var(--accent-b); }
+.ob-center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+
+/* ---------- chapter header ---------- */
+.ob-head { display: flex; align-items: flex-end; gap: 16px; }
+.ob-chapter { font-size: 30px; line-height: 1.1; }
+.ob-dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; max-width: 130px; padding-bottom: 4px; }
+.ob-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); }
+.ob-dots i.on { background: var(--accent-b); }
+
+/* ---------- the page ---------- */
+.ob-stage { perspective: 1400px; display: grid; place-items: center; min-height: 330px; }
+.ob-page {
+  width: min(600px, 100%); min-height: 310px; padding: 22px 28px 18px 40px;
+  display: flex; flex-direction: column; gap: 14px;
+  color: var(--ink); border-radius: 6px 18px 18px 6px;
+  /* A cream page with a shaded spine down the left edge. */
+  background:
+    linear-gradient(90deg, rgba(42, 36, 64, .18), rgba(42, 36, 64, .04) 18px, transparent 34px),
+    linear-gradient(180deg, #fffaf0, var(--paper));
+  box-shadow: 0 30px 60px -22px rgba(0, 0, 0, .75), 6px 6px 0 -2px #e9dfc6, 11px 11px 0 -4px #d9cdb0;
+  transform-origin: left center;
+}
+.ob-page-top { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.ob-kind {
+  margin-left: auto; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: white; text-align: center;
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+}
+.ob-question {
+  flex: 1; margin: 0; display: grid; place-items: center; text-align: center; text-wrap: balance;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; font-size: clamp(22px, 3.6vw, 31px); line-height: 1.3;
+}
+.ob-page-foot { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; opacity: .5; border-top: 1px solid rgba(42, 36, 64, .15); padding-top: 10px; }
+
+/* ---------- controls ---------- */
+.ob-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.ob-pick-btn { padding: 5px 16px 5px 5px; }
+.ob-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; text-align: center; min-height: 52px; }
+
+.ob-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ob-circle { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-seat { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+.ob-seat.reader { border-color: var(--accent-b); background: color-mix(in srgb, var(--accent-b) 16%, transparent); }
+.ob-seat.reader::after { content: '📖'; font-size: 12px; }
+.ob-seat.answerer { border-color: var(--accent-a); background: color-mix(in srgb, var(--accent-a) 20%, transparent); }
+.ob-seat.answerer::after { content: '💬'; font-size: 12px; }
+.ob-seat.done { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+
+/* ---------- closing notes ---------- */
+.ob-notes { width: min(620px, 100%); margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
+.ob-note-help { margin: 0; }
+.ob-opener { cursor: pointer; }
+.ob-opener:hover { background: var(--surface-2); color: var(--text); }
+.ob-note-box { resize: vertical; min-height: 130px; line-height: 1.5; font-family: Georgia, 'Iowan Old Style', serif; font-size: 17px; }
+
+.ob-closed { width: min(620px, 100%); margin-inline: auto; display: flex; flex-direction: column; gap: 22px; perspective: 1200px; }
+.ob-closed h1 { font-size: 40px; }
+.ob-letter { min-height: 0; transform-origin: top center; }
+.ob-letter-text { margin: 6px 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: Georgia, 'Iowan Old Style', serif; font-size: 20px; line-height: 1.5; }
+.ob-sent { padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; }
+.ob-sent p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-dim); }
+
+@media (max-width: 700px) {
+  /* Leave room for the floating chat button so it never covers the skip vote. */
+  .ob { padding-bottom: 64px; }
+  .ob-chapter { font-size: 24px; }
+  .ob-page { padding: 18px 18px 14px 30px; min-height: 280px; }
+  .ob-kind { margin-left: 0; }
+  .ob-page-top { flex-wrap: wrap; }
+  .ob-seat-name { display: none; }
+  .ob-seat { padding: 3px; }
+}

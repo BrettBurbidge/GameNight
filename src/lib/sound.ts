@@ -3,7 +3,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 // Tiny synthesized sound effects (Web Audio, no asset files) plus a per-browser mute setting.
 // Any game can call playSound(); it is a no-op while muted.
 
-export type SoundName = 'heartsBroken' | 'queenOfSpades' | 'discDrop' | 'win' | 'lockIn' | 'signal';
+export type SoundName = 'heartsBroken' | 'queenOfSpades' | 'discDrop' | 'win' | 'lockIn' | 'signal' | 'pageTurn';
 
 const KEY = 'gamenight.muted.v1';
 let muted = (() => {
@@ -97,6 +97,11 @@ const SOUNDS: Record<SoundName, (ac: AudioContext) => void> = {
   signal: (ac) => {
     tone(ac, { freq: 220, to: 880, start: 0, dur: 0.35, type: 'sawtooth', gain: 0.08 });
     tone(ac, { freq: 880, start: 0.35, dur: 0.3, type: 'sine', gain: 0.3 });
+  },
+  // A soft paper flick.
+  pageTurn: (ac) => {
+    tone(ac, { freq: 1800, to: 500, start: 0, dur: 0.12, type: 'triangle', gain: 0.1 });
+    tone(ac, { freq: 700, to: 300, start: 0.07, dur: 0.1, type: 'sine', gain: 0.12 });
   },
   // A quick rising arpeggio.
   win: (ac) => {
