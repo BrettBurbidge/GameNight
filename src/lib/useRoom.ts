@@ -38,6 +38,8 @@ export function useRoom(code: string, identity: Identity, enabled: boolean) {
     socket.on('room:kicked', onKicked);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    // The socket may have connected while this hook was idle (e.g. behind the name gate).
+    setConnected(socket.connected);
     if (socket.connected) join();
 
     return () => {
