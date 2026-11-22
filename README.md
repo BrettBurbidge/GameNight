@@ -2,8 +2,8 @@
 
 Browser games to play remotely with friends. There are no accounts: pick a game, open a lobby, share the invite link (`/join/CODE`), and play.
 
-**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals), Four in a Row (1v1 or solo against a bot, single game to best of 5), On the Dial (a one-clue, find-the-signal party game for 2–12, everyone-for-themselves or co-op), Open Book (a voice-call conversation game for 2–8 adult friends, with private closing notes) and Hearts (4 seats; bots fill the empty ones).
-**On the roadmap (listed as "coming soon" in the catalog):** Spades, Code Words, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Gin Rummy.
+**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals), Four in a Row (1v1 or solo against a bot, single game to best of 5), On the Dial (a one-clue, find-the-signal party game for 2–12, everyone-for-themselves or co-op), Open Book (a voice-call conversation game for 2–8 adult friends, with private closing notes), Code Words (a two-team word game for 4–12 where both ciphers clue at once) and Hearts (4 seats; bots fill the empty ones).
+**On the roadmap (listed as "coming soon" in the catalog):** Spades, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Gin Rummy.
 
 ## Running it
 
