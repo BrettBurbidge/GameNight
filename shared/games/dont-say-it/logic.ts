@@ -1,5 +1,6 @@
 import type { GameContext, GameDefinition } from '../../game';
 import type { PlayerId, PlayerInfo } from '../../types';
+import { findWordHit, normalize } from '../../words';
 import type { CardResult, FeedItem, DontSayItAction, DontSayItView, TurnSummary } from './types';
 import { WORD_CARDS } from './words';
 
@@ -40,7 +41,7 @@ function shuffle<T>(items: T[], random: () => number): T[] {
   return a;
 }
 
-const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const words = normalize;
 const compact = (s: string) => words(s).replace(/ /g, '');
 
 /** "is it a pizza?" matches "Pizza"; "pizzas" too. */
@@ -52,28 +53,9 @@ export function isCorrectGuess(guess: string, secret: string): boolean {
   return [w, `${w}s`, `${w}es`].some((form) => g.includes(` ${form} `));
 }
 
-/** "cheese" -> "chees" so "cheesy" is caught too. Short words are left alone. */
-const stem = (w: string) => {
-  const s = w.replace(/(ing|ed|es|s|e|y)$/, '');
-  return s.length >= 4 ? s : w;
-};
-
 /** Returns the forbidden word a typed clue uses (secret or forbidden, incl. simple word forms), if any. */
-export function findForbiddenHit(clue: string, secret: string, banned: string[]): string | null {
-  const tokens = words(clue).split(' ').filter(Boolean);
-  const joined = ` ${tokens.join(' ')} `;
-  const flat = tokens.join('');
-  for (const forbidden of [secret, ...banned]) {
-    const f = words(forbidden);
-    if (!f) continue;
-    if (f.includes(' ')) {
-      if (joined.includes(` ${f} `) || flat.includes(f.replace(/ /g, ''))) return forbidden;
-    } else if (tokens.some((t) => t === f || (f.length >= 3 && t.startsWith(stem(f))))) {
-      return forbidden;
-    }
-  }
-  return null;
-}
+export const findForbiddenHit = (clue: string, secret: string, banned: string[]): string | null =>
+  findWordHit(clue, [secret, ...banned]);
 
 function drawCard(state: DontSayItState, ctx: GameContext) {
   if (state.deckPos >= state.deck.length) {
