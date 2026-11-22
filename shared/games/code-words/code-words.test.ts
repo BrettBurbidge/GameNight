@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GameContext } from '../../game';
 import type { PlayerInfo } from '../../types';
+import { choosePicks, roll, type ClueRequest, type GuessRequest } from './bot';
 import { BOARD_SIZE, codeWords } from './logic';
 import type { CodeWordsAction } from './types';
 import { BOARD_WORDS } from './words';
@@ -238,4 +239,182 @@ test('four players are needed, teams are balanced, and latecomers fill the small
   const small = state.teams[0].length <= state.teams[1].length ? 0 : 1;
   assert.deepEqual(codeWords.addPlayer!(state, seat(['f'])[0], ctx()), { team: small });
   assert.equal(codeWords.view(state, 'f').role, 'guesser');
+});
+
+// ---------- bots ----------
+
+/** A table where some seats are bots, with a stand-in for the brain: `thoughts` is what it has answered so far. */
+function botTable(ids: string[], bots: string[], config: Record<string, string | number> = {}) {
+  const clock = { now: 1000 };
+  const thoughts = new Map<string, unknown>();
+  const ctx = (): GameContext => ({
+    now: clock.now,
+    random: Math.random,
+    announce: () => {},
+    isConnected: () => true,
+    isBot: (id) => bots.includes(id),
+    thought: (key) => thoughts.get(key),
+  });
+  const state = codeWords.setup(seat(ids), config, ctx());
+  const act = (id: string, action: CodeWordsAction) => codeWords.action(state, id, action, ctx());
+  const bot = (id: string) => codeWords.bot!(state, id, ctx());
+  /** Lets every bot that is ready make one move. Returns how many did. */
+  const botsMove = () => {
+    let moved = 0;
+    for (const id of bots) {
+      const action = bot(id);
+      if (!action) continue;
+      assert.equal(act(id, action), undefined, `${id} made a legal move`);
+      moved++;
+    }
+    return moved;
+  };
+  return { state, clock, thoughts, ctx, act, bot, botsMove };
+}
+
+test('a seat can change hands mid-round without losing its place', () => {
+  const { state, act, view, clueUp } = table(['a', 'b', 'c', 'd', 'e', 'f']);
+  const cipher = state.cipherIds[0];
+  const [g1, g2] = state.teams[0].filter((id) => id !== cipher);
+  clueUp();
+  act(g1, { type: 'pick', slot: 'crack', wordIndex: state.targets[0] });
+  act(g1, { type: 'lock' });
+
+  codeWords.swapPlayer!(state, g1, 'bot_1');
+  codeWords.swapPlayer!(state, cipher, 'bot_2');
+  assert.ok(state.teams[0].includes('bot_1') && state.teams[0].includes('bot_2'));
+  assert.ok(!state.teams[0].includes(g1) && !state.teams[0].includes(cipher));
+  assert.equal(state.cipherIds[0], 'bot_2');
+  assert.equal(view('bot_2').role, 'cipher');
+  assert.equal(view('bot_1').myPicks.crack, state.targets[0], 'the picks come along');
+  assert.ok(state.locked.includes('bot_1') && !state.locked.includes(g1), 'and so does the lock');
+  assert.equal(view(g1).role, 'spectator');
+  assert.deepEqual(view(g2).tally.crack, { [state.targets[0]]: 1 });
+});
+
+test('a bot is only told what its seat can see', () => {
+  const { state, act } = botTable(['a', 'b', 'c', 'd', 'e', 'f'], ['a', 'b', 'c', 'd', 'e', 'f']);
+  const [c0, c1] = state.cipherIds;
+  const [g0a, g0b] = state.teams[0].filter((id) => id !== c0);
+  const [word0, word1] = [state.board[state.targets[0]], state.board[state.targets[1]]];
+
+  const clueTask = codeWords.botTask!(state, c0)!;
+  const clueReq = clueTask.request as ClueRequest;
+  assert.equal(clueReq.target, word0);
+  assert.ok(clueReq.words.includes(word1), 'the other target is just another word on the table');
+  assert.ok(!JSON.stringify({ ...clueReq, words: [] }).includes(word1), 'and is not marked out in any way');
+  assert.notEqual(codeWords.botTask!(state, c1)!.key, clueTask.key);
+  assert.equal(codeWords.botTask!(state, g0a), null, 'guessers have nothing to think about yet');
+
+  act(c0, { type: 'clue', text: 'first hint' });
+  assert.equal(codeWords.botTask!(state, c0), null, 'a sent clue needs no more thought');
+  act(c1, { type: 'clue', text: 'second hint' });
+
+  const guessTask = codeWords.botTask!(state, g0a)!;
+  const guessReq = guessTask.request as GuessRequest;
+  assert.deepEqual([guessReq.ownClue, guessReq.theirClue], ['first hint', 'second hint']);
+  assert.equal(guessReq.words.length, BOARD_SIZE);
+  assert.deepEqual(Object.keys(guessReq).sort(), ['kind', 'ownClue', 'theirClue', 'words'], 'no targets ride along');
+  assert.equal(codeWords.botTask!(state, g0b)!.key, guessTask.key, 'teammates share one reading');
+  const otherGuesser = state.teams[1].find((id) => id !== c1)!;
+  assert.notEqual(codeWords.botTask!(state, otherGuesser)!.key, guessTask.key, 'the other team gets its own');
+  assert.equal(codeWords.botTask!(state, c0), null, 'ciphers sit the guessing out');
+  assert.equal(codeWords.botTask!(state, 'watcher'), null);
+});
+
+test('a cipher bot waits a moment, skips clues the rules reject, and stays quiet with nothing to say', () => {
+  const { state, clock, thoughts, bot } = botTable(['a', 'b', 'c', 'd'], ['a', 'b', 'c', 'd']);
+  const [c0, c1] = state.cipherIds;
+  const key0 = codeWords.botTask!(state, c0)!.key;
+  const key1 = codeWords.botTask!(state, c1)!.key;
+
+  clock.now += 60_000;
+  assert.equal(bot(c0), null, 'no answer from the brain yet');
+  thoughts.set(key0, { clues: [state.board[3].toLowerCase(), 'one two three', 'row 4', '  Fine   clue '] });
+  thoughts.set(key1, null);
+  assert.deepEqual(bot(c0), { type: 'clue', text: 'Fine clue' });
+  assert.equal(bot(c1), null, 'a failed thought means no clue');
+  thoughts.set(key1, { clues: ['way too many words'] });
+  assert.equal(bot(c1), null, 'and so does a thought with nothing usable');
+
+  clock.now -= 59_000;
+  assert.equal(bot(c0), null, 'one second in is too soon to have written a clue');
+});
+
+test('a guesser bot picks, then holds the round open for a human teammate', () => {
+  // Seats are shuffled at setup, so choose the bot afterwards: one guesser on team 0, with a human beside it.
+  const bots: string[] = [];
+  const { state, clock, thoughts, act, bot } = botTable(['a', 'b', 'c', 'd', 'e', 'f'], bots);
+  const [c0, c1] = state.cipherIds;
+  const [botId, human] = state.teams[0].filter((id) => id !== c0);
+  bots.push(botId);
+  const ask = () => bot(botId);
+
+  act(c0, { type: 'clue', text: 'first hint' });
+  act(c1, { type: 'clue', text: 'second hint' });
+  const [t0, t1] = state.targets;
+  thoughts.set(codeWords.botTask!(state, botId)!.key, { own: [t0, 99, -1], theirs: [t0, t1] });
+
+  assert.equal(ask(), null, 'not the instant the clues land');
+  clock.now += 30_000;
+  const first = ask()!;
+  assert.deepEqual(first, { type: 'pick', slot: 'crack', wordIndex: t0 });
+  act(botId, first);
+  const second = ask()!;
+  assert.deepEqual(second, { type: 'pick', slot: 'intercept', wordIndex: t1 }, 'never the same word twice');
+  act(botId, second);
+  assert.equal(ask(), null, 'a human teammate is still deciding');
+  act(human, { type: 'lock' });
+  assert.deepEqual(ask(), { type: 'lock' });
+});
+
+test('skill decides how closely a bot follows the reading', () => {
+  const thought = { own: [1, 2, 3], theirs: [4, 5, 6] };
+  const picks = (skill: 'easy' | 'standard' | 'sharp') =>
+    Array.from({ length: 400 }, (_, i) => choosePicks(thought, skill, () => true, (salt) => roll(`bot_${i}:${salt}`)));
+  const share = (list: { crack: number | null; intercept: number | null }[], test: (p: (typeof list)[number]) => boolean) =>
+    list.filter(test).length / list.length;
+
+  const sharp = picks('sharp');
+  assert.equal(share(sharp, (p) => p.crack === 1 && p.intercept === 4), 1, 'sharp bots always take the top reading');
+  const standard = picks('standard');
+  const easy = picks('easy');
+  assert.ok(share(standard, (p) => p.crack === 1) > 0.75);
+  assert.ok(share(easy, (p) => p.crack === 1) < 0.7 && share(easy, (p) => p.crack === 1) > 0.4);
+  assert.ok(share(easy, (p) => p.intercept === null) > 0.35, 'easy bots often leave the other team alone');
+  assert.ok(share(easy, (p) => p.intercept === 4) < share(standard, (p) => p.intercept === 4));
+
+  assert.deepEqual(choosePicks(null, 'sharp', () => true, () => 0.5), { crack: null, intercept: null }, 'no reading, no picks');
+  assert.deepEqual(choosePicks({ own: [7], theirs: [7] }, 'sharp', () => true, () => 0.5), { crack: 7, intercept: null });
+  assert.deepEqual(choosePicks({ own: [7, 8], theirs: [9] }, 'sharp', (i) => i !== 7, () => 0.5), { crack: 8, intercept: 9 }, 'spent words are skipped');
+});
+
+test('four sharp bots with a perfect brain play a whole game by themselves', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  const { state, clock, thoughts, ctx, botsMove } = botTable(ids, ids, { rounds: 4, botSkill: 'sharp' });
+  assert.equal(state.botSkill, 'sharp');
+
+  for (let step = 0; step < 4000 && !codeWords.isFinished(state); step++) {
+    // The stand-in brain answers every open task straight away, and always correctly.
+    for (const id of ids) {
+      const task = codeWords.botTask!(state, id);
+      if (!task || thoughts.has(task.key)) continue;
+      const team = state.teams[0].includes(id) ? 0 : 1;
+      thoughts.set(task.key, (task.request as ClueRequest).kind === 'clue' ? { clues: [`hint ${'abcdefgh'[state.round]}`] } : { own: [state.targets[team]], theirs: [state.targets[1 - team]] });
+    }
+    if (!botsMove()) {
+      clock.now += 250;
+      codeWords.tick!(state, ctx());
+    }
+  }
+
+  assert.ok(codeWords.isFinished(state), 'the game reached its end');
+  assert.deepEqual(state.scores, [12, 12], 'every clue cracked and intercepted, four rounds running');
+  assert.ok(clock.now < 1000 + 4 * 60_000, 'and nobody waited on a timer except the reveal');
+});
+
+test('the bot skill setting falls back to standard', () => {
+  assert.equal(botTable(['a', 'b', 'c', 'd'], []).state.botSkill, 'standard');
+  assert.equal(botTable(['a', 'b', 'c', 'd'], [], { botSkill: 'genius' }).state.botSkill, 'standard');
+  assert.equal(botTable(['a', 'b', 'c', 'd'], [], { botSkill: 'easy' }).state.botSkill, 'easy');
 });

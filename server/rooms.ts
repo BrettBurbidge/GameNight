@@ -3,6 +3,7 @@ import type { Server, Socket } from 'socket.io';
 import { defaultConfig, getGameMeta, type GameMeta } from '../shared/catalog';
 import type { GameContext, GameDefinition } from '../shared/game';
 import type { ChatMessage, GameConfig, Identity, PlayerId, PlayerInfo, RoomPeek, RoomSnapshot, RoomStatus } from '../shared/types';
+import { CodeWordsBrain, type BotBrain } from './bots/codeWordsBrain';
 import { BOT_PERSONAS, type SassLevel } from './bots/personas';
 import { TableTalk } from './bots/tableTalk';
 import { GAME_DEFINITIONS } from './registry';
@@ -30,7 +31,12 @@ interface Room {
   chat: ChatMessage[];
   lastActive: number;
   botTimer: NodeJS.Timeout | null;
+  /** Answers to the bots' `botTask`s for the current game, by task key. */
+  thoughts: Map<string, unknown>;
 }
+
+/** A thought that has been asked for and not answered yet. */
+const THINKING = Symbol('thinking');
 
 // No 0/O/1/I/L so codes are easy to read aloud.
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -47,8 +53,11 @@ const sanitizeAvatar = (s: unknown) => [...String(s ?? '')].slice(0, 2).join('')
 export class RoomManager {
   private rooms = new Map<string, Room>();
   private talk: TableTalk;
+  /** Games whose bots think with a model, by game id. */
+  private brains: Record<string, BotBrain>;
 
   constructor(private io: Server) {
+    this.brains = { 'code-words': new CodeWordsBrain() };
     this.talk = new TableTalk({
       room: (code) => this.talkView(code),
       post: (code, botId, text) => {
@@ -110,6 +119,7 @@ export class RoomManager {
         chat: [],
         lastActive: Date.now(),
         botTimer: null,
+        thoughts: new Map(),
       };
       this.rooms.set(room.code, room);
       console.log(`room ${room.code} created for ${gameId}`);
@@ -163,7 +173,7 @@ export class RoomManager {
 
     on('room:addBot', () =>
       this.asHost(socket, (room) => {
-        if (room.status !== 'lobby' || !room.meta.bots) return 'Bots are not available here.';
+        if (room.status !== 'lobby' || !this.botsAllowed(room)) return 'Bots are not available here.';
         if (this.activeCount(room) >= room.meta.maxPlayers) return 'The table is full.';
         this.addBot(room);
       }),
@@ -233,6 +243,7 @@ export class RoomManager {
         if (active.length > room.meta.maxPlayers) return `${room.meta.name} allows at most ${room.meta.maxPlayers} players.`;
         const err = room.def.validateStart?.(active.map(publicInfo), room.config);
         if (err) return err;
+        room.thoughts = new Map();
         room.state = room.def.setup(active.map(publicInfo), room.config, this.ctx(room));
         room.status = 'playing';
         this.announce(room, `Game on! ${room.meta.emoji}`);
@@ -246,6 +257,7 @@ export class RoomManager {
         this.talk.reset(room.code);
         room.status = 'lobby';
         room.state = null;
+        room.thoughts = new Map();
         room.players = room.players.filter((p) => p.isBot || p.connected || p.id === room.hostId);
         this.announce(room, 'Back to the lobby.');
         // People who arrived mid-game get first dibs on open or bot seats for the next game.
@@ -366,7 +378,7 @@ export class RoomManager {
   }
 
   private replaceWithBot(room: Room, target: RoomPlayer): string | null {
-    if (!room.def.swapPlayer || !room.meta.bots) return 'Players cannot be replaced mid-game in this game.';
+    if (!room.def.swapPlayer || !this.botsAllowed(room)) return 'Players cannot be replaced mid-game in this game.';
     const bot = this.addBot(room);
     bot.team = target.team;
     room.def.swapPlayer(room.state, target.id, bot.id);
@@ -486,6 +498,7 @@ export class RoomManager {
   private changed(room: Room) {
     room.lastActive = Date.now();
     if (room.status === 'playing' && room.def.isFinished(room.state)) room.status = 'finished';
+    this.think(room);
     this.scheduleBots(room);
     this.broadcast(room);
   }
@@ -495,6 +508,8 @@ export class RoomManager {
       if (room.status !== 'playing' || !room.def.tick) continue;
       try {
         if (room.def.tick(room.state, this.ctx(room))) this.changed(room);
+        // Thinking bots also wait on the clock (a pause before they move), so keep asking them.
+        else if (room.def.botTask) this.scheduleBots(room);
       } catch (err) {
         console.error(`tick ${room.code}`, err);
       }
@@ -518,6 +533,37 @@ export class RoomManager {
     }, base * (0.7 + Math.random() * 0.6));
   }
 
+  /** Whether bots can sit at this table: some games' bots need a model the server may not have. */
+  private botsAllowed(room: Room) {
+    return !!room.meta.bots && (!room.meta.botsNeedModel || !!this.brains[room.gameId]?.enabled);
+  }
+
+  /** Starts any thinking the seated bots need and don't have yet. Answers land in `room.thoughts`. */
+  private think(room: Room) {
+    const brain = this.brains[room.gameId];
+    if (room.status !== 'playing' || !room.def.botTask || !brain?.enabled) return;
+    // Like their moves, bots' thinking waits while every human is away.
+    if (!room.players.some((p) => !p.isBot && p.connected)) return;
+    const thoughts = room.thoughts;
+    for (const bot of room.players) {
+      if (!bot.isBot || bot.spectator) continue;
+      const task = room.def.botTask(room.state, bot.id);
+      if (!task || thoughts.has(task.key)) continue;
+      thoughts.set(task.key, THINKING);
+      const settle = (answer: unknown) => {
+        // The game may have ended or restarted while the brain was working.
+        if (this.rooms.get(room.code) !== room || room.thoughts !== thoughts) return;
+        thoughts.set(task.key, answer);
+        if (answer === null) {
+          this.announce(room, `📡 ${this.player(room, bot.id)?.name ?? 'A bot'} lost the signal this round.`);
+          this.broadcast(room);
+        }
+        this.scheduleBots(room);
+      };
+      brain.solve(task.request).then(settle, () => settle(null));
+    }
+  }
+
   private clearBotTimer(room: Room) {
     if (room.botTimer) clearTimeout(room.botTimer);
     room.botTimer = null;
@@ -530,6 +576,7 @@ export class RoomManager {
       status: room.status,
       hostId: room.hostId,
       players: room.players.map(publicInfo),
+      bots: this.botsAllowed(room),
       config: room.config,
       chat: room.chat,
     };
@@ -553,6 +600,11 @@ export class RoomManager {
       random: Math.random,
       announce: (text) => this.announce(room, text),
       isConnected: (id) => !!room.players.find((p) => p.id === id && p.connected),
+      isBot: (id) => !!this.player(room, id)?.isBot,
+      thought: (key) => {
+        const answer = room.thoughts.get(key);
+        return answer === THINKING ? undefined : answer;
+      },
       tableTalk: (text, weight) => {
         if (!this.talk.enabled) return;
         const named = text.replace(/\{\{([^}]+)\}\}/g, (_, id: string) => this.player(room, id)?.name ?? 'someone');

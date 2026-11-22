@@ -6,6 +6,8 @@ export interface ConfigOption {
   label: string;
   options: { value: string | number; label: string }[];
   default: string | number;
+  /** Only shown once a bot is seated. */
+  forBots?: boolean;
 }
 
 export interface GameMeta {
@@ -23,6 +25,8 @@ export interface GameMeta {
   tags: string[];
   /** Host can add bots in the lobby. */
   bots?: boolean;
+  /** The bots think with a model, so they are only offered when the server has one configured. */
+  botsNeedModel?: boolean;
   /** Empty seats are filled with bots when the game starts. */
   fillWithBots?: boolean;
   /** `from`: below this many players everyone plays on one team (co-op). */
@@ -176,6 +180,8 @@ export const GAMES: GameMeta[] = [
     status: 'live',
     accent: ['#f59e0b', '#06b6d4'],
     tags: ['Party', 'Teams', 'Words'],
+    bots: true,
+    botsNeedModel: true,
     teams: { names: ['Team Amber', 'Team Cyan'], colors: ['#f59e0b', '#22d3ee'] },
     config: [
       {
@@ -206,6 +212,18 @@ export const GAMES: GameMeta[] = [
           { value: 45, label: '45 sec' },
           { value: 75, label: '75 sec' },
           { value: 120, label: '2 min' },
+        ],
+      },
+      {
+        // Read by the bots in shared/games/code-words/bot.ts and their brain in server/bots.
+        key: 'botSkill',
+        label: 'Bot skill',
+        default: 'standard',
+        forBots: true,
+        options: [
+          { value: 'easy', label: 'Easy' },
+          { value: 'standard', label: 'Standard' },
+          { value: 'sharp', label: 'Sharp' },
         ],
       },
     ],

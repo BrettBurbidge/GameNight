@@ -2,7 +2,7 @@
 
 Browser games to play remotely with friends. There are no accounts: pick a game, open a lobby, share the invite link (`/join/CODE`), and play.
 
-**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals), Four in a Row (1v1 or solo against a bot, single game to best of 5), On the Dial (a one-clue, find-the-signal party game for 2–12, everyone-for-themselves or co-op), Open Book (a voice-call conversation game for 2–8 adult friends, with private closing notes), Code Words (a two-team word game for 4–12 where both ciphers clue at once) and Hearts (4 seats; bots fill the empty ones).
+**Live games:** Don’t Say It! (a describe-the-word party game: co-op with 2–3 players, two teams with 4–16), Sketch It (a live drawing-and-guessing game for 2–12, everyone-for-themselves or teams with steals), Four in a Row (1v1 or solo against a bot, single game to best of 5), On the Dial (a one-clue, find-the-signal party game for 2–12, everyone-for-themselves or co-op), Open Book (a voice-call conversation game for 2–8 adult friends, with private closing notes), Code Words (a two-team word game for 4–12 where both ciphers clue at once; the host can add bots when the server has an `ANTHROPIC_API_KEY`) and Hearts (4 seats; bots fill the empty ones).
 **On the roadmap (listed as "coming soon" in the catalog):** Spades, Who's the Spy?, Werewolf, Liar's Dice, Euchre, Crazy Eights, Trivia Showdown, Word Grid, Dice Royale, Gin Rummy.
 
 ## Running it
@@ -41,6 +41,7 @@ src/                    React client
 - **Lobby behaviour.** The host changes settings, adds bots, moves players between teams, and can remove players. If the host leaves, hosting passes to someone else. When people arrive after the game has started, they take over a bot's seat, join a team, or watch live as spectators. People who open the invite to a full lobby wait as spectators and get the next open seat; the host can also move players between seats and watchers (handy for winner-stays rotations).
 - **Live streams.** Games that need high-frequency data (Sketch It's brush strokes) use `stream()` and `streamSync()`. Accepted data is relayed straight to the room without a full snapshot, and anyone who joins or reconnects catches up from `streamSync()`.
 - **Bots and timers.** Games return bot moves from `bot()` and advance timers in `tick()`; the room manager schedules both. Bots pause while every human is disconnected.
+- **Bots that think with a model.** A game whose bots need a model call (Code Words) describes the work in `botTask()`, built only from what that seat may see. The room manager runs it through the game's brain in `server/bots/` and hands the answer back as `ctx.thought(key)`, which `bot()` turns into moves. Such a game sets `botsNeedModel` in the catalog, so bots are only offered when `ANTHROPIC_API_KEY` is set. `BOT_PLAY_MODEL` picks the model (default `claude-haiku-5-5`).
 
 ## Adding a game
 
