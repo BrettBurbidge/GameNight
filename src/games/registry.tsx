@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { FourBoard } from './four-in-a-row/FourBoard';
 import { CodeWordsBoard } from './code-words/CodeWordsBoard';
 import { DialBoard } from './on-the-dial/DialBoard';
+import { FiresideBoard } from './fireside/FiresideBoard';
 import { OpenBookBoard } from './open-book/OpenBookBoard';
 import { HeartsBoard } from './hearts/HeartsBoard';
 import { SketchBoard } from './sketch/SketchBoard';
@@ -16,5 +17,6 @@ export const BOARDS: Record<string, ComponentType<BoardProps>> = {
   'four-in-a-row': FourBoard,
   'on-the-dial': DialBoard,
   'open-book': OpenBookBoard,
+  fireside: FiresideBoard,
   'code-words': CodeWordsBoard,
 };

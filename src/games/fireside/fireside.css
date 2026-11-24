@@ -1,0 +1,84 @@
+/* The theme resolves its accent gradient at the root, so restate it here to pick up this game's colours. */
+.fs { display: flex; flex-direction: column; gap: 16px; --accent: linear-gradient(135deg, var(--accent-a), var(--accent-b)); }
+.fs-center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+
+/* ---------- header ---------- */
+.fs-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fs-spicy { background: rgba(244, 63, 94, .2); border-color: rgba(244, 63, 94, .5); color: #fecdd3; }
+.fs-progress { height: 4px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin-top: -6px; }
+.fs-progress i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .4s ease; }
+
+/* ---------- the card: dark, lit from below like something held near a fire ---------- */
+.fs-stage { display: grid; place-items: center; min-height: 270px; }
+.fs-card {
+  width: min(620px, 100%); min-height: 250px; padding: 20px 26px 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  color: #fff4e6; border-radius: 22px; border: 1px solid rgba(251, 146, 60, .35);
+  background:
+    radial-gradient(120% 90% at 50% 118%, rgba(251, 146, 60, .5), rgba(190, 18, 60, .22) 45%, transparent 72%),
+    linear-gradient(180deg, #1f1420, #170d14);
+  box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .8), 0 18px 60px -22px color-mix(in srgb, var(--accent-a) 70%, transparent);
+}
+.fs-card.spicy { border-color: rgba(244, 63, 94, .6); }
+.fs-card-top { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.fs-kind {
+  margin-left: auto; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: white;
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+}
+.fs-question {
+  flex: 1; margin: 0; display: grid; place-items: center; text-align: center; text-wrap: balance;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif; font-size: clamp(21px, 3.4vw, 29px); line-height: 1.32;
+}
+.fs-card-foot { text-align: center; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; opacity: .65; }
+
+/* ---------- picking ---------- */
+.fs-options { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: min(620px, 100%); margin-inline: auto; }
+.fs-option { flex: 1 1 200px; padding: 14px 16px; font-size: 16px; white-space: normal; text-align: center; justify-content: center; }
+.fs-option.on { background: var(--accent); border-color: transparent; color: white; }
+.fs-option:disabled:not(.on) { opacity: .55; }
+.fs-person { flex: 0 1 auto; padding: 6px 18px 6px 6px; }
+
+/* ---------- the reveal ---------- */
+.fs-results { width: min(620px, 100%); margin-inline: auto; display: flex; flex-direction: column; gap: 8px; }
+.fs-verdict { text-align: center; font-size: 17px; text-wrap: balance; padding-bottom: 4px; }
+.fs-row {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface);
+}
+.fs-row > i { position: absolute; inset: 0 auto 0 0; background: var(--surface-2); transition: width .5s ease; }
+.fs-row.top > i { background: linear-gradient(90deg, color-mix(in srgb, var(--accent-a) 55%, transparent), color-mix(in srgb, var(--accent-b) 40%, transparent)); }
+.fs-row > :not(i) { position: relative; }
+.fs-row.mine { border-color: var(--border-strong); }
+.fs-row.mine .fs-row-label::after { content: ' · your pick'; color: var(--text-dim); font-weight: 500; }
+.fs-row-label { flex: 1; min-width: 0; font-weight: 600; }
+.fs-row-faces { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.fs-row-faces > span { display: flex; }
+
+/* ---------- controls ---------- */
+.fs-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; text-align: center; min-height: 52px; }
+.fs-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.fs-circle { display: flex; flex-wrap: wrap; gap: 8px; }
+.fs-seat { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+.fs-seat.done { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.fs-seat.holder { border-color: var(--accent-a); background: color-mix(in srgb, var(--accent-a) 18%, transparent); }
+.fs-seat.holder::after { content: '🔥'; font-size: 12px; }
+
+/* ---------- the end ---------- */
+.fs-over { width: min(620px, 100%); margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+.fs-over h1 { font-size: 38px; }
+.fs-award { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+.fs-award-emoji { font-size: 34px; }
+.fs-award h3 { margin: 2px 0; overflow-wrap: anywhere; }
+.fs-award-faces { display: flex; gap: 6px; }
+
+@media (max-width: 700px) {
+  /* Leave room for the floating chat button so it never covers the end vote. */
+  .fs { padding-bottom: 64px; }
+  .fs-card { padding: 16px 18px 14px; min-height: 220px; }
+  .fs-card-top { flex-wrap: wrap; }
+  .fs-option { flex-basis: 100%; }
+  .fs-person { flex-basis: auto; }
+  .fs-seat-name { display: none; }
+  .fs-seat { padding: 3px; }
+  .fs-seat.holder, .fs-seat.done { padding-right: 8px; }
+}
