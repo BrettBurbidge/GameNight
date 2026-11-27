@@ -167,3 +167,20 @@ test('teams mode falls back to free-for-all under 4 players', () => {
   assert.equal(state.mode, 'ffa');
   assert.equal(state.teams, null);
 });
+
+test('back-to-back games in one room do not offer words that were already drawn', () => {
+  const memory = {};
+  const ctx = (): GameContext => ({ now: 1000, random: Math.random, announce: () => {}, isConnected: () => true, memory });
+  const players: PlayerInfo[] = ['a', 'b'].map((id) => ({
+    id, name: id, avatar: '', color: '', isBot: false, connected: true, spectator: false, team: null,
+  }));
+  const drawn = new Set<string>();
+  for (let game = 0; game < 12; game++) {
+    const state = sketch.setup(players, { drawSeconds: 80, rounds: 1, hints: 'on' }, ctx());
+    const offered = sketch.view(state, state.drawerId!).choices!;
+    for (const w of offered) assert.ok(!drawn.has(w), `${w} was drawn in an earlier game`);
+    sketch.action(state, state.drawerId!, { type: 'choose', index: game % 3 }, ctx());
+    drawn.add(offered[game % 3]);
+  }
+  assert.equal(drawn.size, 12);
+});

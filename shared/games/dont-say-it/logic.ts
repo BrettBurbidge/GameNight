@@ -1,7 +1,7 @@
 import type { GameContext, GameDefinition } from '../../game';
 import type { PlayerId, PlayerInfo } from '../../types';
 import { findWordHit, normalize } from '../../words';
-import type { CardResult, FeedItem, DontSayItAction, DontSayItView, TurnSummary } from './types';
+import { BUZZ_LOCK_MS, GIVER_LOCK_MS, type CardResult, type FeedItem, type DontSayItAction, type DontSayItView, type TurnSummary } from './types';
 import { WORD_CARDS } from './words';
 
 interface DontSayItState {
@@ -22,6 +22,8 @@ interface DontSayItState {
   deckPos: number;
   cardIndex: number | null;
   cardSeq: number;
+  /** When the current card was dealt. */
+  cardAt: number;
   feed: FeedItem[];
   feedSeq: number;
   results: { word: string; result: CardResult }[];
@@ -57,13 +59,40 @@ export function isCorrectGuess(guess: string, secret: string): boolean {
 export const findForbiddenHit = (clue: string, secret: string, banned: string[]): string | null =>
   findWordHit(clue, [secret, ...banned]);
 
+/** Cards this room has been dealt, kept between games so a group playing several in a row gets new words. */
+function seenCards(ctx: GameContext): number[] {
+  if (!ctx.memory) return [];
+  return (ctx.memory.seenCards ??= []) as number[];
+}
+
+/** A shuffled deck of the cards this room hasn't seen yet; once it has seen them all, the whole pack again. */
+function freshDeck(ctx: GameContext, justPlayed: number | null = null): number[] {
+  const seen = seenCards(ctx);
+  let fresh = WORD_CARDS.map((_, i) => i).filter((i) => !seen.includes(i));
+  if (!fresh.length) {
+    seen.length = 0;
+    fresh = WORD_CARDS.map((_, i) => i);
+  }
+  const deck = shuffle(fresh, ctx.random);
+  // Don't open a reshuffled pack with the card that was just on the table.
+  if (deck.length > 1 && deck[0] === justPlayed) deck.push(deck.shift()!);
+  return deck;
+}
+
 function drawCard(state: DontSayItState, ctx: GameContext) {
   if (state.deckPos >= state.deck.length) {
-    state.deck = shuffle(WORD_CARDS.map((_, i) => i), ctx.random);
+    state.deck = freshDeck(ctx, state.cardIndex);
     state.deckPos = 0;
   }
   state.cardIndex = state.deck[state.deckPos++];
   state.cardSeq++;
+  state.cardAt = ctx.now;
+  seenCards(ctx).push(state.cardIndex);
+}
+
+/** Whether a button press is for the card on the table now, and that card has been up long enough to mean it. */
+function pressCounts(state: DontSayItState, seq: number, lockMs: number, ctx: GameContext): boolean {
+  return state.cardIndex !== null && seq === state.cardSeq && ctx.now - state.cardAt >= lockMs;
 }
 
 function pushFeed(state: DontSayItState, item: Omit<FeedItem, 'id'>) {
@@ -151,10 +180,11 @@ export const dontSayIt: GameDefinition<DontSayItState, DontSayItAction, DontSayI
       turnsTaken: 0,
       totalTurns: rounds * 2,
       skipPenalty: Number(config.skipPenalty ?? 1),
-      deck: shuffle(WORD_CARDS.map((_, i) => i), ctx.random),
+      deck: freshDeck(ctx),
       deckPos: 0,
       cardIndex: null,
       cardSeq: 0,
+      cardAt: 0,
       feed: [],
       feedSeq: 0,
       results: [],
@@ -211,16 +241,20 @@ export const dontSayIt: GameDefinition<DontSayItState, DontSayItAction, DontSayI
       case 'correct':
         if (state.phase !== 'turn') return 'No card in play.';
         if (!isGiver) return 'Only the clue giver can mark a card correct.';
+        if (!pressCounts(state, action.seq, GIVER_LOCK_MS, ctx)) return;
         resolveCard(state, 'correct', playerId, ctx);
         return;
       case 'skip':
         if (state.phase !== 'turn') return 'No card in play.';
         if (!isGiver) return 'Only the clue giver can skip.';
+        if (!pressCounts(state, action.seq, GIVER_LOCK_MS, ctx)) return;
         resolveCard(state, 'skip', playerId, ctx);
         return;
       case 'buzz':
         if (state.phase !== 'turn') return 'No card in play.';
         if (team === null || team === state.activeTeam) return 'Only the other team can buzz.';
+        // One buzz per card: a second tap, or a second person's, carries the old card's seq and is dropped.
+        if (!pressCounts(state, action.seq, BUZZ_LOCK_MS, ctx)) return;
         resolveCard(state, 'forbidden', playerId, ctx);
         return;
       default:

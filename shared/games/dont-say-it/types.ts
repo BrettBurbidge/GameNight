@@ -4,9 +4,16 @@ export type DontSayItAction =
   | { type: 'start-turn'; takeOver?: boolean }
   | { type: 'guess'; text: string }
   | { type: 'clue'; text: string }
-  | { type: 'correct' }
-  | { type: 'skip' }
-  | { type: 'buzz' };
+  // `seq` is the card the player was looking at (the view's `cardSeq`). A tap that lands after the card
+  // has already changed is dropped, so lag or two people tapping at once can't hit the next card too.
+  | { type: 'correct'; seq: number }
+  | { type: 'skip'; seq: number }
+  | { type: 'buzz'; seq: number };
+
+/** A fresh card can't be buzzed for this long: nobody has said anything yet, so it can only be a stray tap. */
+export const BUZZ_LOCK_MS = 1500;
+/** Same idea for the clue giver's "got it" / skip buttons, which guards against a double tap. */
+export const GIVER_LOCK_MS = 500;
 
 export interface WordCard {
   word: string;

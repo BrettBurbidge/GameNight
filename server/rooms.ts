@@ -24,6 +24,11 @@ interface Room {
   meta: GameMeta;
   def: GameDefinition;
   hostId: PlayerId;
+  /**
+   * Whose room this is: the creator, or whoever they handed it to. If they drop off (a locked phone,
+   * a trip to the messages app) someone else hosts in the meantime, and they get it back on return.
+   */
+  ownerId: PlayerId;
   status: RoomStatus;
   players: RoomPlayer[];
   config: GameConfig;
@@ -33,6 +38,8 @@ interface Room {
   botTimer: NodeJS.Timeout | null;
   /** Answers to the bots' `botTask`s for the current game, by task key. */
   thoughts: Map<string, unknown>;
+  /** Scratch space a game keeps between games in this room (see `GameContext.memory`). */
+  memory: Record<string, unknown>;
 }
 
 /** A thought that has been asked for and not answered yet. */
@@ -88,16 +95,8 @@ export class RoomManager {
     };
 
     on<{ code: string }>('room:peek', ({ code }) => {
-      const room = this.rooms.get(String(code).toUpperCase());
-      if (!room) return 'That room code does not exist (or the game has ended).';
-      const peek: RoomPeek = {
-        code: room.code,
-        gameId: room.gameId,
-        status: room.status,
-        playerCount: room.players.filter((p) => !p.spectator).length,
-        hostName: this.player(room, room.hostId)?.name ?? '',
-      };
-      return { room: peek };
+      const peek = this.peek(code);
+      return peek ? { room: peek } : 'That room code does not exist (or the game has ended).';
     });
 
     on<{ gameId: string; identity: Identity }>('room:create', ({ gameId, identity }) => {
@@ -112,6 +111,7 @@ export class RoomManager {
         meta,
         def,
         hostId: identity.id,
+        ownerId: identity.id,
         status: 'lobby',
         players: [],
         config: defaultConfig(meta),
@@ -120,6 +120,7 @@ export class RoomManager {
         lastActive: Date.now(),
         botTimer: null,
         thoughts: new Map(),
+        memory: {},
       };
       this.rooms.set(room.code, room);
       console.log(`room ${room.code} created for ${gameId}`);
@@ -230,6 +231,7 @@ export class RoomManager {
         const target = this.player(room, playerId);
         if (!target || target.isBot) return 'Cannot make that player host.';
         room.hostId = target.id;
+        room.ownerId = target.id;
         this.announce(room, `${target.name} is now the host.`);
       }),
     );
@@ -258,7 +260,7 @@ export class RoomManager {
         room.status = 'lobby';
         room.state = null;
         room.thoughts = new Map();
-        room.players = room.players.filter((p) => p.isBot || p.connected || p.id === room.hostId);
+        room.players = room.players.filter((p) => p.isBot || p.connected || p.id === room.hostId || p.id === room.ownerId);
         this.announce(room, 'Back to the lobby.');
         // People who arrived mid-game get first dibs on open or bot seats for the next game.
         this.fillOpenSeats(room, { replaceBots: true });
@@ -360,6 +362,10 @@ export class RoomManager {
     socket.data.playerId = player.id;
     socket.join(room.code);
     if (!this.player(room, room.hostId)) room.hostId = player.id;
+    else if (player.id === room.ownerId && room.hostId !== player.id) {
+      room.hostId = player.id;
+      this.announce(room, `${player.name} is back and hosting again.`);
+    }
     this.changed(room);
   }
 
@@ -399,20 +405,27 @@ export class RoomManager {
     if (player.sockets.size > 0) return;
 
     player.connected = false;
-    if (explicit) this.drop(room, player);
+    if (explicit) this.drop(room, player, true);
     else {
       // Give refreshes and flaky connections a moment before freeing a lobby seat.
       setTimeout(() => {
-        if (!player.connected && this.rooms.get(room.code) === room) this.drop(room, player);
+        if (!player.connected && this.rooms.get(room.code) === room) this.drop(room, player, false);
       }, LOBBY_GRACE_MS);
       this.changed(room);
     }
   }
 
-  /** A player is gone for good: free their lobby seat (mid-game they keep it and can return). */
-  private drop(room: Room, player: RoomPlayer) {
-    if (room.status === 'lobby' || player.spectator) {
-      if (!room.players.includes(player)) return;
+  /**
+   * A player is gone: free their lobby seat (mid-game they keep it and can return).
+   * The room's owner only loses a lobby seat by leaving on purpose — a phone that went to sleep while
+   * they were texting out the invite must not cost them the seat, or close the room they just made.
+   */
+  private drop(room: Room, player: RoomPlayer, explicit: boolean) {
+    if (!room.players.includes(player)) return;
+    const keepSeat = room.status === 'lobby' && !explicit && player.id === room.ownerId;
+    if (keepSeat) {
+      this.announce(room, `${player.name} disconnected.`);
+    } else if (room.status === 'lobby' || player.spectator) {
       room.players = room.players.filter((p) => p !== player);
       this.announce(room, `${player.name} left.`);
       if (room.status === 'lobby' && !player.spectator) this.fillOpenSeats(room);
@@ -598,6 +611,7 @@ export class RoomManager {
     return {
       now: Date.now(),
       random: Math.random,
+      memory: room.memory,
       announce: (text) => this.announce(room, text),
       isConnected: (id) => !!room.players.find((p) => p.id === id && p.connected),
       isBot: (id) => !!this.player(room, id)?.isBot,
@@ -710,6 +724,19 @@ export class RoomManager {
       if (empty && now - room.lastActive > IDLE_ROOM_MS / 6) this.destroy(room);
       else if (now - room.lastActive > IDLE_ROOM_MS) this.destroy(room);
     }
+  }
+
+  /** What an invite needs to know about a room before joining it. */
+  peek(code: unknown): RoomPeek | null {
+    const room = this.rooms.get(String(code).toUpperCase());
+    if (!room) return null;
+    return {
+      code: room.code,
+      gameId: room.gameId,
+      status: room.status,
+      playerCount: room.players.filter((p) => !p.spectator).length,
+      hostName: this.player(room, room.ownerId)?.name ?? this.player(room, room.hostId)?.name ?? '',
+    };
   }
 
   get roomCount() {

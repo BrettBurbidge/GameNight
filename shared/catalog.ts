@@ -619,6 +619,11 @@ export const GAMES: GameMeta[] = [
   },
 ];
 
+/** The headline of an invite: the link preview in a text message, and the tab title. */
+export function inviteTitle(gameName: string, hostName?: string): string {
+  return hostName ? `Play ${gameName} with ${hostName}` : `Play ${gameName}`;
+}
+
 export function getGameMeta(id: string): GameMeta | undefined {
   return GAMES.find((g) => g.id === id);
 }
