@@ -18,6 +18,11 @@ export interface GameContext {
    * `null` if it could not be. Tests can stub this to play bots without a model.
    */
   thought?(key: string): unknown;
+  /**
+   * Scratch space that outlives a single game: it lasts as long as the room does, so a game can remember
+   * things across "Play again" (e.g. which cards this group has already seen). Absent in bare tests.
+   */
+  memory?: Record<string, unknown>;
   /** Whether a seat is held by a bot. */
   isBot?(playerId: PlayerId): boolean;
 }

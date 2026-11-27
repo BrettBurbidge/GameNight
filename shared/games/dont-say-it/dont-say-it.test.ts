@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import type { GameContext } from '../../game';
 import type { PlayerInfo } from '../../types';
 import { findForbiddenHit, isCorrectGuess, dontSayIt } from './logic';
+import { WORD_CARDS } from './words';
 
 test('guess matching is forgiving', () => {
   assert.ok(isCorrectGuess('pizza', 'Pizza'));
@@ -40,8 +41,23 @@ test('a turn scores and rotates to the other team', () => {
   const word = dontSayIt.view(state, giver).card!.word;
   dontSayIt.action(state, guesser, { type: 'guess', text: word }, ctx());
   assert.equal(state.scores[team], 1);
-  dontSayIt.action(state, opponent, { type: 'buzz' }, ctx());
+  const seq = state.cardSeq;
+  dontSayIt.action(state, opponent, { type: 'buzz', seq }, ctx());
+  assert.equal(state.scores[team], 1, 'a card that only just appeared cannot be buzzed');
+  now += 2000;
+  dontSayIt.action(state, opponent, { type: 'buzz', seq }, ctx());
   assert.equal(state.scores[team], 0);
+  // Mashing the button, or a teammate buzzing the same card a moment later, must not hit the next card.
+  now += 5000;
+  dontSayIt.action(state, opponent, { type: 'buzz', seq }, ctx());
+  dontSayIt.action(state, state.teams[1 - team][1], { type: 'buzz', seq }, ctx());
+  assert.equal(state.scores[team], 0, 'one buzz per card');
+  assert.equal(state.cardSeq, seq + 1);
+  // Same for the clue giver double-tapping skip.
+  now += 1000;
+  dontSayIt.action(state, giver, { type: 'skip', seq: seq + 1 }, ctx());
+  dontSayIt.action(state, giver, { type: 'skip', seq: seq + 1 }, ctx());
+  assert.equal(state.scores[team], -1);
   now += 61_000;
   assert.ok(dontSayIt.tick!(state, ctx()));
   assert.equal(state.phase, 'ready');
@@ -68,7 +84,7 @@ test('two players play co-op, alternating clue giver, and latecomers join the sa
   const word = dontSayIt.view(state, first).card!.word;
   dontSayIt.action(state, other, { type: 'guess', text: word }, ctx());
   assert.equal(state.scores[0], 1);
-  assert.ok(dontSayIt.action(state, other, { type: 'buzz' }, ctx()), 'nobody can buzz in co-op');
+  assert.ok(dontSayIt.action(state, other, { type: 'buzz', seq: state.cardSeq }, ctx()), 'nobody can buzz in co-op');
 
   now += 31_000;
   dontSayIt.tick!(state, ctx());
@@ -82,4 +98,36 @@ test('two players play co-op, alternating clue giver, and latecomers join the sa
   dontSayIt.tick!(state, ctx());
   assert.equal(state.phase, 'over');
   assert.equal(dontSayIt.view(state, 'a').winner, null);
+});
+
+test('back-to-back games in one room do not repeat words until the pack runs out', () => {
+  let now = 1000;
+  const memory = {};
+  const ctx = (): GameContext => ({ now, random: Math.random, announce: () => {}, isConnected: () => true, memory });
+  const players: PlayerInfo[] = ['a', 'b'].map((id) => ({
+    id, name: id, avatar: '', color: '', isBot: false, connected: true, spectator: false, team: null,
+  }));
+  const seen: string[] = [];
+  const playGame = (cards: number) => {
+    const state = dontSayIt.setup(players, { turnSeconds: 600, rounds: 1, skipPenalty: 0 }, ctx());
+    dontSayIt.action(state, state.giverId, { type: 'start-turn' }, ctx());
+    // Every card dealt counts as seen, including the one left on the table when the turn ends.
+    seen.push(dontSayIt.view(state, state.giverId).card!.word);
+    for (let i = 1; i < cards; i++) {
+      now += 1000;
+      dontSayIt.action(state, state.giverId, { type: 'skip', seq: state.cardSeq }, ctx());
+      seen.push(dontSayIt.view(state, state.giverId).card!.word);
+    }
+  };
+  const total = WORD_CARDS.length;
+  assert.equal(new Set(WORD_CARDS.map((c) => c[0])).size, total, 'the pack has no duplicate words');
+  const perGame = Math.floor(total / 3);
+  playGame(perGame);
+  playGame(perGame);
+  playGame(perGame);
+  assert.equal(new Set(seen).size, seen.length, 'three games, no word twice');
+  // A fourth game runs past the end of the pack: it finishes the unseen cards, then starts over.
+  playGame(perGame);
+  assert.equal(new Set(seen.slice(0, total)).size, total, 'every card is used before any repeats');
+  assert.notEqual(seen[total], seen[total - 1]);
 });

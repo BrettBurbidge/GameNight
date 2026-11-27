@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getGameMeta } from '../../shared/catalog';
+import { getGameMeta, inviteTitle } from '../../shared/catalog';
 import type { PlayerInfo, RoomPeek } from '../../shared/types';
 import { AppShell } from '../components/AppShell';
 import { NameGate } from '../components/NameGate';
 import { BOARDS } from '../games/registry';
 import { useIdentity } from '../lib/identity';
-import { accentStyle } from '../lib/site';
+import { accentStyle, SITE_NAME } from '../lib/site';
 import { request } from '../lib/socket';
 import { useToast } from '../lib/toast';
 import { useRoom } from '../lib/useRoom';
@@ -38,6 +38,14 @@ export function Room() {
     () => Object.fromEntries((room?.players ?? []).map((p) => [p.id, p])) as Record<string, PlayerInfo>,
     [room?.players],
   );
+
+  // Name the tab after the game, so it reads right in the tab bar, history and anything shared from it.
+  const hostName = room ? playersById[room.hostId]?.name : peek?.hostName;
+  useEffect(() => {
+    if (!meta) return;
+    document.title = inviteTitle(meta.name, hostName);
+    return () => void (document.title = SITE_NAME);
+  }, [meta, hostName]);
 
   const act = useCallback(
     async (action: unknown) => {

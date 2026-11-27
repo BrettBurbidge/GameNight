@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getGameMeta } from '../../../shared/catalog';
-import type { DontSayItAction, DontSayItView } from '../../../shared/games/dont-say-it/types';
+import { BUZZ_LOCK_MS, GIVER_LOCK_MS, type DontSayItAction, type DontSayItView } from '../../../shared/games/dont-say-it/types';
 import { Avatar } from '../../components/Avatar';
 import { Confetti } from '../../components/Confetti';
 import { TimerRing } from '../../components/TimerRing';
@@ -131,8 +131,45 @@ function TurnRecap({ view, playersById }: { view: DontSayItView; playersById: Bo
   );
 }
 
+/**
+ * One press per card. A new card is locked for a beat (so mashing a laggy button can't carry over onto it),
+ * and once pressed the button stays spent until the card changes.
+ */
+function useCardPress(view: DontSayItView, act: BoardProps<DontSayItView, DontSayItAction>['act']) {
+  const { cardSeq, role } = view;
+  const [settling, setSettling] = useState(true);
+  const [sentSeq, setSentSeq] = useState<number | null>(null);
+  const sent = useRef<number | null>(null);
+
+  useEffect(() => {
+    setSettling(true);
+    const id = setTimeout(() => setSettling(false), role === 'watcher' ? BUZZ_LOCK_MS : GIVER_LOCK_MS);
+    return () => clearTimeout(id);
+  }, [cardSeq, role]);
+
+  // If the server never answers with a new card (a dropped message), let them try again.
+  useEffect(() => {
+    if (sentSeq === null) return;
+    const id = setTimeout(() => {
+      sent.current = null;
+      setSentSeq(null);
+    }, 2500);
+    return () => clearTimeout(id);
+  }, [sentSeq]);
+
+  const ready = !settling && sentSeq !== cardSeq;
+  const press = (type: 'correct' | 'skip' | 'buzz') => {
+    if (settling || sent.current === cardSeq) return;
+    sent.current = cardSeq;
+    setSentSeq(cardSeq);
+    act({ type, seq: cardSeq });
+  };
+  return { ready, press };
+}
+
 function TurnPanel({ view, act }: { view: DontSayItView; act: BoardProps['act'] }) {
   const { role } = view;
+  const { ready, press } = useCardPress(view, act);
   return (
     <div className="dsi-turn">
       <div className="card-wrap">
@@ -170,15 +207,15 @@ function TurnPanel({ view, act }: { view: DontSayItView; act: BoardProps['act'] 
         {role === 'giver' && (
           <>
             <div className="row" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-good btn-lg" onClick={() => act({ type: 'correct' })}>✓ They got it</button>
-              <button className="btn btn-lg" onClick={() => act({ type: 'skip' })}>Skip ↷</button>
+              <button className="btn btn-good btn-lg" onClick={() => press('correct')}>✓ They got it</button>
+              <button className="btn btn-lg" onClick={() => press('skip')}>Skip ↷</button>
             </div>
             <TextEntry placeholder="Type a clue (optional — forbidden words get buzzed!)" onSubmit={(text) => act({ type: 'clue', text })} />
           </>
         )}
         {role === 'guesser' && <TextEntry autoFocus placeholder="Type your guess and hit enter…" big onSubmit={(text) => act({ type: 'guess', text })} />}
         {role === 'watcher' && (
-          <motion.button className="buzz" whileTap={{ scale: 0.9 }} onClick={() => act({ type: 'buzz' })}>
+          <motion.button className="buzz" disabled={!ready} whileTap={ready ? { scale: 0.9 } : undefined} onClick={() => press('buzz')}>
             BUZZ!
             <small>They said a forbidden word</small>
           </motion.button>

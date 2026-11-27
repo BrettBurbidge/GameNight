@@ -71,6 +71,7 @@
 .dsi-entry .input { flex: 1; }
 .input-big { font-size: 18px; padding: 16px 20px; }
 .buzz {
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   align-self: center; width: 180px; height: 180px; border-radius: 50%; border: 0; cursor: pointer;
   font-family: var(--font-display); font-size: 40px; font-weight: 700; color: white;
   background: radial-gradient(circle at 35% 30%, #ff8a8a, #e11d48 60%, #9f1239);
@@ -79,7 +80,8 @@
   transition: transform .1s, box-shadow .1s;
 }
 .buzz small { font-family: var(--font-body); font-size: 11px; font-weight: 600; opacity: .85; }
-.buzz:active { transform: translateY(8px); box-shadow: 0 4px 0 #881337, 0 10px 20px -10px rgba(225, 29, 72, .7); }
+.buzz:disabled { cursor: default; filter: grayscale(.7) brightness(.8); transform: translateY(8px); box-shadow: 0 4px 0 #4c0519; }
+.buzz:active:not(:disabled) { transform: translateY(8px); box-shadow: 0 4px 0 #881337, 0 10px 20px -10px rgba(225, 29, 72, .7); }
 
 .dsi-feed { max-height: 220px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
 .feed-item { display: flex; gap: 8px; font-size: 14px; align-items: baseline; }

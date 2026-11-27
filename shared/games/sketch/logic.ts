@@ -132,8 +132,15 @@ function startTurn(state: SketchState, drawerId: PlayerId, ctx: GameContext) {
   state.turnId++;
   state.drawerId = drawerId;
   state.phase = 'choosing';
-  const fresh = (list: string[]) => list.filter((w) => !state.usedWords.includes(w));
-  state.choices = [EASY_WORDS, MEDIUM_WORDS, HARD_WORDS].map((tier) => pick(fresh(tier).length ? fresh(tier) : tier, ctx.random));
+  state.choices = [EASY_WORDS, MEDIUM_WORDS, HARD_WORDS].map((tier) => {
+    let fresh = tier.filter((w) => !state.usedWords.includes(w));
+    if (!fresh.length) {
+      // This room has drawn the whole tier: forget it (in place, the list is shared with the room) and start over.
+      for (let i = state.usedWords.length - 1; i >= 0; i--) if (tier.includes(state.usedWords[i])) state.usedWords.splice(i, 1);
+      fresh = tier;
+    }
+    return pick(fresh, ctx.random);
+  });
   state.word = null;
   state.revealed = [];
   state.guessed = [];
@@ -300,7 +307,8 @@ export const sketch: GameDefinition<SketchState, SketchAction, SketchView> = {
       feedSeq: 0,
       lastResult: null,
       drawerAwaySince: null,
-      usedWords: [],
+      // Kept in the room's memory, so a group playing several games in a row doesn't draw the same words again.
+      usedWords: ctx.memory ? ((ctx.memory.usedWords ??= []) as string[]) : [],
     };
     if (mode === 'teams') {
       // advance() flips to the other team before picking a drawer.

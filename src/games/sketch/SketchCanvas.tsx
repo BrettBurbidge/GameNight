@@ -159,6 +159,24 @@ export const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function Sketc
     stroke.current = null;
   };
 
+  // iOS treats a held finger as a long press and selects the canvas, which then swallows the next strokes.
+  // Cancelling the touch itself is the only thing that stops it (React's own touch listeners are passive).
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!canDraw || !el) return;
+    const cancel = (e: Event) => e.preventDefault();
+    el.addEventListener('touchstart', cancel, { passive: false });
+    el.addEventListener('touchmove', cancel, { passive: false });
+    el.addEventListener('contextmenu', cancel);
+    el.addEventListener('selectstart', cancel);
+    return () => {
+      el.removeEventListener('touchstart', cancel);
+      el.removeEventListener('touchmove', cancel);
+      el.removeEventListener('contextmenu', cancel);
+      el.removeEventListener('selectstart', cancel);
+    };
+  }, [canDraw]);
+
   // Ctrl/Cmd+Z undoes while drawing.
   useEffect(() => {
     if (!canDraw) return;

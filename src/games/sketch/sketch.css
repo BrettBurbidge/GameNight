@@ -46,7 +46,9 @@
 .sk-main { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; align-items: start; }
 .sk-stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .sk-canvas-wrap { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow), 0 0 0 1px var(--border); background: #fff; }
-.sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; touch-action: auto; }
+/* A long press on a phone must not select the canvas or pop the callout menu — it's a finger holding still mid-drawing. */
+.sk-canvas-wrap, .sk-canvas { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.sk-canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; touch-action: auto; outline: none; }
 .sk-canvas.can-draw { cursor: crosshair; touch-action: none; }
 .sk-canvas.can-draw.tool-fill { cursor: cell; }
 .sk-steal {
