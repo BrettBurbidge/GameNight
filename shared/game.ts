@@ -25,6 +25,8 @@ export interface GameContext {
   memory?: Record<string, unknown>;
   /** Whether a seat is held by a bot. */
   isBot?(playerId: PlayerId): boolean;
+  /** Whether this player is currently running the room. */
+  isHost?(playerId: PlayerId): boolean;
 }
 
 /**

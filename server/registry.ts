@@ -6,12 +6,14 @@ import { openBook } from '../shared/games/open-book/logic';
 import { codeWords } from '../shared/games/code-words/logic';
 import { hearts } from '../shared/games/hearts/logic';
 import { sketch } from '../shared/games/sketch/logic';
+import { scribbleChain } from '../shared/games/scribble-chain/logic';
 import { dontSayIt } from '../shared/games/dont-say-it/logic';
 
 export const GAME_DEFINITIONS: Record<string, GameDefinition> = {
   [dontSayIt.id]: dontSayIt,
   [hearts.id]: hearts,
   [sketch.id]: sketch,
+  [scribbleChain.id]: scribbleChain,
   [fourInARow.id]: fourInARow,
   [onTheDial.id]: onTheDial,
   [openBook.id]: openBook,

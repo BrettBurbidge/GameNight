@@ -10,11 +10,10 @@ import { request } from '../../lib/socket';
 import { useNow } from '../../lib/useNow';
 import type { BoardProps } from '../types';
 import { SketchCanvas, type SketchCanvasHandle, type Tool } from './SketchCanvas';
+import { COLORS, SIZES, SketchTools } from './SketchTools';
 import './sketch.css';
 
 const TEAMS = getGameMeta('sketch')!.teams!;
-const COLORS = ['#111827', '#6b7280', '#ef4444', '#f97316', '#facc15', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#92400e', '#fde68a'];
-const SIZES = [4, 10, 22];
 const TIER = ['Easy', 'Medium', 'Hard'];
 
 export function SketchBoard({ view, room, playersById, isHost, act, serverNow }: BoardProps<SketchView, SketchAction>) {
@@ -62,36 +61,7 @@ export function SketchBoard({ view, room, playersById, isHost, act, serverNow }:
             <Overlay view={view} playersById={playersById} isHost={isHost} act={act} drawerName={drawer?.name ?? 'Someone'} drawer={drawer} />
           </div>
           {canDraw && (
-            <div className="sk-tools panel">
-              <div className="sk-colors">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    className={`sk-swatch ${color === c && tool !== 'eraser' ? 'on' : ''}`}
-                    style={{ background: c }}
-                    aria-label={`Colour ${c}`}
-                    onClick={() => {
-                      setColor(c);
-                      if (tool === 'eraser') setTool('brush');
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="sk-toolrow">
-                {SIZES.map((s) => (
-                  <button key={s} className={`sk-size ${size === s ? 'on' : ''}`} onClick={() => setSize(s)} aria-label={`Brush size ${s}`}>
-                    <i style={{ width: s, height: s }} />
-                  </button>
-                ))}
-                <span className="sk-sep" />
-                <button className={`btn btn-sm ${tool === 'brush' ? 'btn-primary' : ''}`} onClick={() => setTool('brush')}>✏️ Brush</button>
-                <button className={`btn btn-sm ${tool === 'fill' ? 'btn-primary' : ''}`} onClick={() => setTool('fill')}>🪣 Fill</button>
-                <button className={`btn btn-sm ${tool === 'eraser' ? 'btn-primary' : ''}`} onClick={() => setTool('eraser')}>🧽 Eraser</button>
-                <span className="sk-sep" />
-                <button className="btn btn-sm" onClick={() => canvas.current?.undo()} title="Undo (Ctrl/⌘+Z)">↶ Undo</button>
-                <button className="btn btn-sm btn-danger" onClick={() => canvas.current?.clear()}>🗑 Clear</button>
-              </div>
-            </div>
+            <SketchTools tool={tool} color={color} size={size} onTool={setTool} onColor={setColor} onSize={setSize} canvas={canvas} />
           )}
         </div>
         <GuessFeed view={view} playersById={playersById} act={act} />

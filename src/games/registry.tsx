@@ -6,6 +6,7 @@ import { FiresideBoard } from './fireside/FiresideBoard';
 import { OpenBookBoard } from './open-book/OpenBookBoard';
 import { HeartsBoard } from './hearts/HeartsBoard';
 import { SketchBoard } from './sketch/SketchBoard';
+import { ScribbleChainBoard } from './scribble-chain/ScribbleChainBoard';
 import { DontSayItBoard } from './dont-say-it/DontSayItBoard';
 import type { BoardProps } from './types';
 
@@ -14,6 +15,7 @@ export const BOARDS: Record<string, ComponentType<BoardProps>> = {
   'dont-say-it': DontSayItBoard,
   hearts: HeartsBoard,
   sketch: SketchBoard,
+  'scribble-chain': ScribbleChainBoard,
   'four-in-a-row': FourBoard,
   'on-the-dial': DialBoard,
   'open-book': OpenBookBoard,

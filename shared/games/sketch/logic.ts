@@ -1,7 +1,7 @@
 import type { GameContext, GameDefinition } from '../../game';
 import type { PlayerId, PlayerInfo } from '../../types';
 import type { DrawOp, FeedItem, SketchAction, SketchView, StreamEvent, StreamSnapshot, TurnResult } from './types';
-import { CANVAS_H, CANVAS_W } from './types';
+import { validOp } from '../../drawing';
 import { EASY_WORDS, HARD_WORDS, MEDIUM_WORDS } from './words';
 
 type Audience = 'all' | 'insiders' | PlayerId;
@@ -224,35 +224,6 @@ function finish(state: SketchState, ctx: GameContext) {
 function pendingGuessers(state: SketchState, ctx: GameContext): PlayerId[] {
   const pool = state.mode === 'teams' ? state.teams![state.activeTeam] : state.players;
   return pool.filter((id) => id !== state.drawerId && !state.guessed.includes(id) && ctx.isConnected(id));
-}
-
-function validOp(raw: unknown): DrawOp | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const op = raw as Record<string, unknown>;
-  const num = (v: unknown, max: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(max, Math.round(v))) : null);
-  const color = (v: unknown) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : null);
-  switch (op.t) {
-    case 'begin': {
-      const id = num(op.id, 1e9), x = num(op.x, CANVAS_W), y = num(op.y, CANVAS_H), size = num(op.size, 60), c = color(op.color);
-      return id === null || x === null || y === null || !size || !c ? null : { t: 'begin', id, x, y, size, color: c };
-    }
-    case 'pts': {
-      const id = num(op.id, 1e9);
-      if (id === null || !Array.isArray(op.pts) || op.pts.length % 2 || op.pts.length > 400) return null;
-      const pts = op.pts.map((v, i) => num(v, i % 2 ? CANVAS_H : CANVAS_W));
-      return pts.some((v) => v === null) ? null : { t: 'pts', id, pts: pts as number[] };
-    }
-    case 'fill': {
-      const x = num(op.x, CANVAS_W), y = num(op.y, CANVAS_H), c = color(op.color);
-      return x === null || y === null || !c ? null : { t: 'fill', x, y, color: c };
-    }
-    case 'undo':
-      return { t: 'undo' };
-    case 'clear':
-      return { t: 'clear' };
-    default:
-      return null;
-  }
 }
 
 export const sketch: GameDefinition<SketchState, SketchAction, SketchView> = {
