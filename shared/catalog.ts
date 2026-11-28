@@ -299,6 +299,58 @@ export const GAMES: GameMeta[] = [
     ],
   },
   {
+    id: 'scribble-chain',
+    name: 'Scribble Chain',
+    tagline: 'Draw it. Guess it. Pass it on. Watch it fall apart.',
+    description:
+      'Everyone starts a book with a secret word and draws it. Then the books go round the table: guess the drawing, draw the guess, guess that drawing. At the end each book is opened page by page so everyone can see exactly where “lighthouse” became “angry candle”. No points, no winners.',
+    emoji: '📒',
+    minPlayers: 4,
+    maxPlayers: 10,
+    minutes: '10–20',
+    status: 'live',
+    accent: ['#06b6d4', '#a855f7'],
+    tags: ['Party', 'Drawing', 'No winners'],
+    config: [
+      {
+        key: 'prompts',
+        label: 'Starting words',
+        default: 'deck',
+        options: [
+          { value: 'deck', label: 'From the deck' },
+          { value: 'custom', label: 'Write your own' },
+        ],
+      },
+      {
+        key: 'drawSeconds',
+        label: 'Draw time',
+        default: 60,
+        options: [
+          { value: 45, label: '45 sec' },
+          { value: 60, label: '60 sec' },
+          { value: 90, label: '90 sec' },
+        ],
+      },
+      {
+        key: 'guessSeconds',
+        label: 'Guess time',
+        default: 30,
+        options: [
+          { value: 20, label: '20 sec' },
+          { value: 30, label: '30 sec' },
+          { value: 45, label: '45 sec' },
+        ],
+      },
+    ],
+    howToPlay: [
+      'Everyone picks a secret word and gets a book. Nobody sees anyone else’s page.',
+      'Draw the word in front of you, then the books are passed along.',
+      'Now you have someone’s drawing: type what you think it is. Pass again, and the next player draws your guess.',
+      'Drawing and guessing alternate until every book has been round the table.',
+      'Then the books are opened one at a time. The owner flips the pages while everyone watches it go wrong.',
+    ],
+  },
+  {
     id: 'on-the-dial',
     name: 'On the Dial',
     tagline: 'One clue. Everyone hunts for the signal.',

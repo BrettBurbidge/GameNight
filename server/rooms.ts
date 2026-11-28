@@ -615,6 +615,7 @@ export class RoomManager {
       announce: (text) => this.announce(room, text),
       isConnected: (id) => !!room.players.find((p) => p.id === id && p.connected),
       isBot: (id) => !!this.player(room, id)?.isBot,
+      isHost: (id) => room.hostId === id,
       thought: (key) => {
         const answer = room.thoughts.get(key);
         return answer === THINKING ? undefined : answer;

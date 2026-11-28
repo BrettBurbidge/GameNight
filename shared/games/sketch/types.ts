@@ -1,27 +1,6 @@
 import type { PlayerId } from '../../types';
 
-/** Drawing ops on a fixed 800×600 canvas. Strokes are streamed as begin + batched points. */
-export type DrawOp =
-  | { t: 'begin'; id: number; color: string; size: number; x: number; y: number }
-  | { t: 'pts'; id: number; pts: number[] }
-  | { t: 'fill'; x: number; y: number; color: string }
-  | { t: 'undo' }
-  | { t: 'clear' };
-
-export const CANVAS_W = 800;
-export const CANVAS_H = 600;
-
-/** What the server relays for each accepted op. */
-export interface StreamEvent {
-  turnId: number;
-  seq: number;
-  op: DrawOp;
-}
-
-export interface StreamSnapshot {
-  turnId: number;
-  ops: { seq: number; op: DrawOp }[];
-}
+export { CANVAS_H, CANVAS_W, type DrawOp, type StreamEvent, type StreamSnapshot } from '../../drawing';
 
 export type SketchAction = { type: 'choose'; index: number } | { type: 'guess'; text: string };
 
